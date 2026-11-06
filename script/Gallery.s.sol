@@ -5,7 +5,8 @@ import {Script} from "forge-std/Script.sol";
 import {OdometerArt} from "../src/art/OdometerArt.sol";
 import {Reading} from "../src/Types.sol";
 
-/// @notice Writes previews/gallery.html: the contract's own SVG for every stage, status and holder flag.
+/// @notice Writes previews/gallery.html (the contract's own SVG for every stage, status and holder flag) and the
+/// site's placeholder and icon. Run: FOUNDRY_PROFILE=gallery forge script script/Gallery.s.sol
 contract Gallery is Script {
     function run() external {
         uint256[7] memory mm = [uint256(420_000), 1_070_000, 5_310_000, 12_730_000, 27_900_000, 58_120_000, 104_660_000];
@@ -25,5 +26,11 @@ contract Gallery is Script {
             html = string.concat(html, "</div>");
         }
         vm.writeFile("previews/gallery.html", string.concat(html, "</body>"));
+        // the site's placeholder and icon: a fresh odometer, jogging at 0.00 km
+        Reading memory fresh;
+        fresh.status = 1;
+        fresh.live = true;
+        vm.writeFile("site/placeholder.svg", string(OdometerArt.svg(fresh)));
+        vm.writeFile("site/favicon.svg", string(OdometerArt.svg(fresh)));
     }
 }

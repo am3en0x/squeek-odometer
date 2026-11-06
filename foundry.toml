@@ -21,4 +21,4 @@ sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
 
 # The art of every stage x status x holder from the contract itself: forge script script/Gallery.s.sol --profile gallery
 [profile.gallery]
-fs_permissions = [{ access = "write", path = "./previews" }]
+fs_permissions = [{ access = "write", path = "./previews" }, { access = "write", path = "./site" }]
