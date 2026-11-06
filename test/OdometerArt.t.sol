@@ -32,6 +32,8 @@ contract OdometerArtTest is Test {
         r.startWork = 11_048;
         r.blockHeight = 1_140;
         r.live = status != 3;
+        r.tier = holder ? 3 : 0;
+        r.pace = status == 2 ? 1_800 : status == 1 ? 600 : 0;
     }
 
     function _has(string memory hay, string memory needle) internal pure returns (bool) {
@@ -147,10 +149,11 @@ contract OdometerArtTest is Test {
         string memory jog = art.svg(_r(2, 1, false, 5_000_000));
         string memory zoom = art.svg(_r(2, 2, false, 5_000_000));
         string memory nap = art.svg(_r(2, 0, false, 5_000_000));
-        assertTrue(_has(jog, '<animate attributeName="opacity" values="1;0;0" dur=".6s" calcMode="discrete" repeatCount="indefinite"/>'), "spokes spin");
-        assertTrue(_has(jog, 'dur=".4s"'), "legs run");
-        assertTrue(_has(zoom, 'dur=".3s"'), "the wheel spins faster");
-        assertTrue(_has(zoom, 'dur=".2s"'), "the legs too");
+        // pace 600 -> a spoke cycle of 900 - 600/3 = 700 ms, legs two thirds of it; pace 1,800 -> 300 ms and 200 ms
+        assertTrue(_has(jog, '<animate attributeName="opacity" values="1;0;0" dur="700ms" calcMode="discrete" repeatCount="indefinite"/>'), "spokes spin");
+        assertTrue(_has(jog, 'dur="466ms"'), "legs run");
+        assertTrue(_has(zoom, 'dur="300ms"'), "the wheel spins faster");
+        assertTrue(_has(zoom, 'dur="200ms"'), "the legs too");
         assertFalse(_has(nap, 'attributeName="opacity"'), "a napping hamster does not run");
         assertTrue(_has(nap, '<animateTransform attributeName="transform" type="translate"'), "but his z float");
     }
@@ -193,5 +196,28 @@ contract OdometerArtTest is Test {
         odo.mint();
         uint256 roll = uint256(keccak256(abi.encode(uint256(1), uint256(11_048)))) % 100;
         assertEq(odo.reading(1).fur, art.fur(roll));
+    }
+
+    function test_theFastestHeCanGo() public view {
+        Reading memory r = _r(2, 2, false, 5_000_000);
+        r.pace = 10_000;
+        assertTrue(_has(art.svg(r), 'dur="240ms"'), "the wheel never blurs past 240 ms a turn");
+    }
+
+    function test_frameColorsByTierAndTraits() public view {
+        Reading memory r = _r(0, 1, true, 0);
+        r.tier = 1;
+        assertTrue(_has(art.svg(r), 'stroke="#c98a4b" stroke-width="2"'), "bronze");
+        r.tier = 2;
+        assertTrue(_has(art.svg(r), 'stroke="#d7dde8" stroke-width="2"'), "silver");
+        r.tier = 3;
+        assertTrue(_has(art.svg(r), 'stroke="#f5b301" stroke-width="2"'), "gold");
+        r.tier = 4;
+        assertTrue(_has(art.svg(r), 'stroke="#7fe7ff" stroke-width="2"'), "diamond");
+        assertTrue(_has(art.json(1, r), '{"trait_type":"Frame","value":"Diamond"}'));
+        assertTrue(_has(art.json(1, r), '{"trait_type":"Pace (turns / 30 min)","display_type":"number","value":600}'));
+        r.tier = 0;
+        r.holder = false;
+        assertTrue(_has(art.json(1, r), '{"trait_type":"Frame","value":"None"}'));
     }
 }

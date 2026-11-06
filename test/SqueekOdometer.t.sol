@@ -189,4 +189,35 @@ contract SqueekOdometerTest is Test {
         vm.expectRevert();
         odo.reading(7);
     }
+
+    // ---- frame tiers by Squeek power, and the pace (2026-11-07)
+
+    function test_frameTierFollowsSqueekPower() public {
+        _mint(alice);
+        assertEq(odo.reading(1).tier, 0);
+        nft.setBalance(alice, 1);
+        assertEq(odo.reading(1).tier, 1, "a Squeek in the wallet: bronze");
+        nft.setBalance(alice, 0);
+        staking.setPower(alice, 1_000e18);
+        assertEq(odo.reading(1).tier, 1, "one Level 1 deposited: bronze");
+        staking.setPower(alice, 4_840e18);
+        assertEq(odo.reading(1).tier, 2, "Level 3 power: silver");
+        staking.setPower(alice, 23_426e18);
+        assertEq(odo.reading(1).tier, 3, "Level 5 power: gold");
+        staking.setPower(alice, 113_380e18);
+        assertEq(odo.reading(1).tier, 4, "Level 7 power: diamond");
+        assertTrue(odo.reading(1).holder);
+        staking.setBroken(true);
+        assertEq(odo.reading(1).tier, 0);
+    }
+
+    function test_paceIsTheLastThreeRoundsOfWork() public {
+        _mint(alice);
+        core.set(20, 20_000, 1);
+        core.setRound(18, 300);
+        core.setRound(20, 450);
+        assertEq(odo.reading(1).pace, 750);
+        core.setBroken(true);
+        assertEq(odo.reading(1).pace, 0);
+    }
 }

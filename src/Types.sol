@@ -12,4 +12,6 @@ struct Reading {
     uint64 blockHeight; // Squeek block height
     bool live; // SqueekCore answered
     uint8 fur; // 0 Golden .. 6 Shiny Gold, rolled from the token id and its start
+    uint8 tier; // holder frame: 0 none, 1 bronze, 2 silver, 3 gold, 4 diamond (by Squeek power in staking)
+    uint256 pace; // work settled in the last three rounds (wheel turns per 30 minutes)
 }

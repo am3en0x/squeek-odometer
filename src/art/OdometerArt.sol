@@ -50,7 +50,7 @@ library OdometerArt {
         if (awake) {
             bytes[] memory spokes = new bytes[](3);
             (spokes[0], spokes[1], spokes[2]) = (Sprites.SPOKES_0, Sprites.SPOKES_1, Sprites.SPOKES_2);
-            _frames(b, spokes, zoom ? ".3s" : ".6s", look);
+            _frames(b, spokes, _ms(_spokeMs(r.pace)), look);
         } else {
             _layer(b, Sprites.SPOKES_0, look);
         }
@@ -58,7 +58,7 @@ library OdometerArt {
         if (zoom) {
             bytes[] memory lines = new bytes[](2);
             (lines[0], lines[1]) = (Sprites.ZOOMIES_0, Sprites.ZOOMIES_1);
-            _frames(b, lines, ".2s", look);
+            _frames(b, lines, _ms(_spokeMs(r.pace) * 2 / 3), look);
         }
         if (r.stage == 6) _layer(b, awake ? Sprites.CAPE_RUN : Sprites.CAPE_NAP, look);
         _layer(b, awake ? Sprites.HAMSTER_RUN : Sprites.HAMSTER_NAP, look);
@@ -68,7 +68,7 @@ library OdometerArt {
             bool shod = r.stage >= 3;
             legs[0] = shod ? bytes.concat(Sprites.LEGS_0, Sprites.SHOES_0) : Sprites.LEGS_0;
             legs[1] = shod ? bytes.concat(Sprites.LEGS_1, Sprites.SHOES_1) : Sprites.LEGS_1;
-            _frames(b, legs, zoom ? ".2s" : ".4s", look);
+            _frames(b, legs, _ms(_spokeMs(r.pace) * 2 / 3), look);
         }
         _gear(b, r.stage, awake, look);
         if (r.status == NAPPING) {
@@ -79,9 +79,10 @@ library OdometerArt {
         _number(b, id);
         _add(b, '<rect x="3" y="31" width="34" height="7" fill="#0b0e14"/>');
         _text(b, r.live ? kmText(r.distanceMm) : bytes("?"));
-        _add(b, r.holder
-            ? bytes('<rect x="1" y="1" width="38" height="38" fill="none" stroke="#f5b301" stroke-width="2"/>')
-            : bytes('<rect x=".5" y=".5" width="39" height="39" fill="none" stroke="#3a4150"/>'));
+        _add(b, r.tier == 0
+            ? bytes('<rect x=".5" y=".5" width="39" height="39" fill="none" stroke="#3a4150"/>')
+            : abi.encodePacked('<rect x="1" y="1" width="38" height="38" fill="none" stroke="',
+                _slice("#c98a4b#d7dde8#f5b301#7fe7ff", uint256(r.tier > 4 ? 3 : r.tier - 1) * 7, 7), '" stroke-width="2"/>'));
         _add(b, "</svg>");
         return _done(b);
     }
@@ -99,6 +100,8 @@ library OdometerArt {
         _add(b, abi.encodePacked('{"trait_type":"Status","value":"', statusName(r.status), '"},'));
         _add(b, abi.encodePacked('{"trait_type":"Fur","value":"', furName(r.fur), '"},'));
         _add(b, abi.encodePacked('{"trait_type":"Squeek Holder","value":"', r.holder ? "Yes" : "No", '"},'));
+        _add(b, abi.encodePacked('{"trait_type":"Frame","value":"', frameName(r.tier), '"},'));
+        _add(b, abi.encodePacked('{"trait_type":"Pace (turns / 30 min)","display_type":"number","value":', r.pace.toString(), "},"));
         _add(b, abi.encodePacked('{"trait_type":"Start Work","display_type":"number","value":', r.startWork.toString(), "},"));
         _add(b, abi.encodePacked('{"trait_type":"Squeek Block Height","display_type":"number","value":', uint256(r.blockHeight).toString(), "}"));
         _add(b, "]}");
@@ -119,6 +122,14 @@ library OdometerArt {
             if (roll < upTo[i]) return i;
         }
         return 6;
+    }
+
+    function frameName(uint8 t) internal pure returns (string memory) {
+        if (t == 0) return "None";
+        if (t == 1) return "Bronze";
+        if (t == 2) return "Silver";
+        if (t == 3) return "Gold";
+        return "Diamond";
     }
 
     function furName(uint8 f) internal pure returns (string memory) {
@@ -149,6 +160,17 @@ library OdometerArt {
     }
 
     // ---------------------------------------------------------------- scene parts
+
+    /// @dev One turn of the wheel in the art follows his real pace (work in the last three rounds): 900 ms when he
+    /// barely moves, 400 ms at the zoomies line of 1,500, never faster than 240 ms.
+    function _spokeMs(uint256 pace) private pure returns (uint256) {
+        uint256 slow = pace / 3;
+        return slow >= 660 ? 240 : 900 - slow;
+    }
+
+    function _ms(uint256 ms) private pure returns (string memory) {
+        return string.concat(ms.toString(), "ms");
+    }
 
     function _stageBg(uint8 s) private pure returns (bytes memory) {
         return _slice("#1b2232#1c2a38#1b3530#273520#3a2c1c#3a1c2a#2a1c3a", uint256(s > 6 ? 6 : s) * 7, 7);

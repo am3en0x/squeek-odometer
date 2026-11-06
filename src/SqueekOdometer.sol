@@ -77,13 +77,14 @@ contract SqueekOdometer is ERC721 {
             r.live = true;
             r.work = s[1] > r.startWork ? s[1] - r.startWork : 0;
             r.blockHeight = uint64(s[3]);
-            r.status = _status(uint64(s[0]));
+            (r.status, r.pace) = _status(uint64(s[0]));
         } else {
             r.status = UNKNOWN;
         }
         r.distanceMm = r.work * MM_PER_WORK;
         r.stage = stageOf(r.distanceMm);
-        r.holder = _holds(owner);
+        r.tier = _tier(owner);
+        r.holder = r.tier > 0;
     }
 
     /// @notice Metadata and art, rendered from the live reading on every call (nothing is stored but the start).
@@ -106,25 +107,32 @@ contract SqueekOdometer is ERC721 {
         }
     }
 
-    /// @dev Napping, jogging or zoomies from the work settled in the last three rounds (up to `settled`).
-    function _status(uint64 settled) internal view returns (uint8) {
-        if (settled == 0) return NAPPING;
+    /// @dev Napping, jogging or zoomies from the work settled in the last three rounds (up to `settled`), and that work.
+    function _status(uint64 settled) internal view returns (uint8, uint256) {
+        if (settled == 0) return (NAPPING, 0);
         uint64 from = settled > 3 ? settled - 3 : 0;
         // RoundPage is dynamic: [offset, certifiedThroughRound, start(cumulativeWork, ..), end(cumulativeWork, ..)]
         (bool ok, uint256[8] memory p) =
             _read(address(core), abi.encodeCall(ISqueekCore.roundPage, (from, settled, 3)), 6);
-        if (!ok) return UNKNOWN;
+        if (!ok) return (UNKNOWN, 0);
         uint256 w = p[5] > p[2] ? p[5] - p[2] : 0;
-        if (w == 0) return NAPPING;
-        return w >= ZOOMIES_WORK ? ZOOMIES : JOGGING;
+        if (w == 0) return (NAPPING, 0);
+        return (w >= ZOOMIES_WORK ? ZOOMIES : JOGGING, w);
     }
 
-    /// @dev A Squeek in the wallet, or Squeeks deposited in staking (staking then owns them, so the wallet holds 0).
-    function _holds(address who) internal view returns (bool) {
-        (bool ok, uint256[8] memory b) = _read(address(squeeks), abi.encodeCall(ISqueekNFT.balanceOf, (who)), 1);
-        if (ok && b[0] > 0) return true;
-        (ok, b) = _read(address(staking), abi.encodeCall(ISqueekStaking.accountPower, (who)), 1);
-        return ok && b[0] > 0;
+    /// @dev The holder's frame from Squeek power deposited in staking (Squeekchain's base power per level: L3 4,840,
+    /// L5 23,426, L7 113,380, at 1e18): diamond, gold, silver, else bronze; a Squeek only in the wallet (no power: its
+    /// level cannot be read without its id) is bronze. Staking owns deposited Squeeks, so their wallet holds 0.
+    function _tier(address who) internal view returns (uint8) {
+        (bool ok, uint256[8] memory b) = _read(address(staking), abi.encodeCall(ISqueekStaking.accountPower, (who)), 1);
+        if (ok && b[0] > 0) {
+            if (b[0] >= 113_380e18) return 4;
+            if (b[0] >= 23_426e18) return 3;
+            if (b[0] >= 4_840e18) return 2;
+            return 1;
+        }
+        (ok, b) = _read(address(squeeks), abi.encodeCall(ISqueekNFT.balanceOf, (who)), 1);
+        return ok && b[0] > 0 ? 1 : 0;
     }
 
     /// @dev A gas-capped static call that copies at most `words` words of the answer (no return-data bomb) and fails
