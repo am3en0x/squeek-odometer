@@ -1,11 +1,13 @@
 // Squeek Odometer site: plain JSON-RPC, no libraries. Reads go to a public Sepolia RPC so the page works without a
 // wallet; only the mint goes through the wallet.
 const CFG = window.ODOMETER_CONFIG
-const SEL = { mint: '0x1249c58b', idOf: '0xd94fe832', tokenURI: '0xc87b56dd', totalMinted: '0xa2309ff8' }
+const SEL = { mint: '0x1249c58b', idOf: '0xd94fe832', tokenURI: '0xc87b56dd', totalMinted: '0xa2309ff8', refresh: '0x9c75dd35' }
 const MINTED = '0xc9d0543a84d3510329c0783b91576878ceb484e8699944cb5610c3436b3b8e39' // Minted(uint256,address,uint256)
 const CHAIN_HEX = '0x' + CFG.chainId.toString(16)
 const $ = (id) => document.getElementById(id)
 let account = null
+let mineId = 0
+const short = (a) => a.slice(0, 6) + '\u2026' + a.slice(-4)
 
 // ---------------------------------------------------------------- JSON-RPC and ABI helpers
 let rpcId = 0
@@ -36,23 +38,27 @@ const km = (meta) => Number(trait(meta, 'Distance (km)')).toFixed(2)
 function say(text, kind = '') { const m = $('msg'); m.textContent = text; m.className = 'msg ' + kind }
 
 async function showSupply() {
-  try { $('supply').textContent = Number(BigInt(await call(SEL.totalMinted))).toLocaleString('en-US') + ' / 9,999 minted' } catch {}
+  if (!CFG.address) return
+  try { $('supply').textContent = Number(BigInt(await call(SEL.totalMinted))).toLocaleString('en-US') + ' / 9,999' } catch {}
 }
 
 async function showMine() {
   if (!account || !CFG.address) return
   const id = Number(BigInt(await call(SEL.idOf + word(account))))
-  if (!id) { $('mint').disabled = false; $('mine-caption').textContent = 'Your odometer shows up here after you mint.'; return }
+  mineId = id
+  if (!id) { $('mint').disabled = false; $('mine-caption').textContent = 'Shows up here after you mint.'; return }
   const meta = await token(id)
   $('mine').src = meta.image
-  $('mine-caption').textContent = `#${id} · ${km(meta)} km since your mint · ${trait(meta, 'Stage')} · ${trait(meta, 'Status')}`
+  $('mine').alt = `Your odometer, #${id}`
+  $('mine-caption').textContent = `#${id} \u00b7 ${km(meta)} km since your mint \u00b7 ${trait(meta, 'Stage')} \u00b7 ${trait(meta, 'Status')}`
   $('mint').disabled = true
   $('mint').textContent = 'Minted'
+  $('refresh').hidden = false
 }
 
 async function showRecent() {
   const box = $('recent')
-  if (!CFG.address) { box.innerHTML = '<p class="muted">The contract is not deployed yet.</p>'; return }
+  if (!CFG.address) { box.innerHTML = '<p class="fine">The contract is not deployed yet.</p>'; return }
   try {
     const head = Number(BigInt(await rpc('eth_blockNumber')))
     const logs = []
@@ -63,7 +69,7 @@ async function showRecent() {
       logs.unshift(...part)
     }
     const ids = logs.map((l) => Number(BigInt(l.topics[1]))).reverse().slice(0, 8)
-    if (!ids.length) { box.innerHTML = '<p class="muted">No odometers yet. Be the first.</p>'; return }
+    if (!ids.length) { box.innerHTML = '<p class="fine">No odometers yet. Be the first.</p>'; return }
     box.innerHTML = ''
     for (const id of ids) {
       const meta = await token(id)
@@ -72,28 +78,40 @@ async function showRecent() {
       const img = document.createElement('img')
       img.src = meta.image; img.alt = meta.name; img.width = 160; img.height = 160; img.loading = 'lazy'
       const cap = document.createElement('figcaption')
-      cap.textContent = `#${id} · ${km(meta)} km · ${trait(meta, 'Status')}`
+      const b = document.createElement('b')
+      b.textContent = `#${id}`
+      cap.append(b, ` \u00b7 ${km(meta)} km \u00b7 ${trait(meta, 'Status')}`)
       card.append(img, cap)
       box.append(card)
     }
   } catch (e) {
-    box.innerHTML = '<p class="muted">Could not read the latest mints right now.</p>'
+    box.innerHTML = '<p class="fine">Could not read the latest mints right now. Reload in a minute.</p>'
   }
 }
 
+// The wheel's live state from Squeekchain's API: the LED board and the numbers beside it.
 async function showLive() {
+  const led = window.LedBoard
   try {
-    const s = await (await fetch(CFG.api + '/v1/status')).json()
-    const m = s.measurement || {}
+    const st = await (await fetch(CFG.api + '/v1/status')).json()
+    const m = st.measurement || {}
+    const online = m.freshness === 'online'
     const rpm = (m.rpmMilli || 0) / 1000
-    $('live-state').textContent = rpm > 0 ? 'running' : 'napping'
-    $('live-state').className = 'v ' + (rpm > 0 ? 'on' : 'off')
-    $('live-rpm').textContent = rpm > 0 ? rpm.toFixed(0) + ' rpm' : '0 rpm'
-    const anchor = (s.builder || {}).anchor || {}
-    $('live-height').textContent = anchor.blockHeight != null ? Number(anchor.blockHeight).toLocaleString('en-US') : '—'
-    $('live-work').textContent = m.cumulativeWorkUnits != null ? Number(m.cumulativeWorkUnits).toLocaleString('en-US') + ' turns' : '—'
+    const work = m.cumulativeWorkUnits != null ? Number(m.cumulativeWorkUnits) : null
+    const block = ((st.builder || {}).anchor || {}).blockHeight
+    const state = !online ? 'nosignal' : rpm > 0 ? 'running' : 'napping'
+    const kmRun = work != null ? (work * 887) / 1e6 : null
+    $('live-state').textContent = state === 'running' ? 'running' : state === 'napping' ? 'napping' : 'no signal'
+    $('live-state').className = state === 'running' ? 'on' : state === 'napping' ? 'off' : ''
+    $('live-rpm').textContent = online ? rpm.toFixed(0) + ' rpm' : '\u2013'
+    $('live-work').textContent = work != null ? work.toLocaleString('en-US') : '\u2013'
+    $('live-km').textContent = kmRun != null ? kmRun.toFixed(2) + ' km' : '\u2013'
+    $('live-height').textContent = block != null ? Number(block).toLocaleString('en-US') : '\u2013'
+    led?.set({ state, km: kmRun, rpm: online ? rpm : null, block: block != null ? Number(block) : null })
   } catch {
     $('live-state').textContent = 'unavailable'
+    for (const id of ['live-rpm', 'live-work', 'live-km', 'live-height']) $(id).textContent = '\u2013'
+    led?.set({ state: 'nosignal' })
   }
 }
 
@@ -103,7 +121,8 @@ async function connect() {
   try {
     const [a] = await window.ethereum.request({ method: 'eth_requestAccounts' })
     account = a.toLowerCase()
-    $('connect').textContent = a.slice(0, 6) + '…' + a.slice(-4)
+    $('connect-label').textContent = short(a)
+    $('connect').classList.add('on')
     await switchChain()
     await showMine()
     if (!$('mint').disabled) say('')
@@ -119,22 +138,51 @@ async function switchChain() {
 async function mint() {
   if (!account) return connect()
   $('mint').disabled = true
+  $('mint').setAttribute('aria-busy', 'true')
   try {
     await switchChain()
     say('Confirm the mint in your wallet. It is free; you pay only Sepolia gas.')
     const hash = await window.ethereum.request({ method: 'eth_sendTransaction', params: [{ from: account, to: CFG.address, data: SEL.mint }] })
-    say('Minting… waiting for Sepolia to include it.')
-    let receipt = null
-    for (let i = 0; i < 90 && !receipt; i++) {
-      receipt = await rpc('eth_getTransactionReceipt', [hash])
-      if (!receipt) await new Promise((r) => setTimeout(r, 2000))
-    }
+    say('Minting\u2026 waiting for Sepolia to include it.')
+    const receipt = await waitFor(hash)
     if (!receipt || receipt.status !== '0x1') throw new Error('The mint did not go through. If you already minted, each wallet gets one.')
     say('Minted. Your odometer starts counting now.', 'good')
     await Promise.all([showMine(), showSupply(), showRecent()])
   } catch (e) {
     say(e.message || 'The mint did not go through.', 'bad')
     $('mint').disabled = false
+  } finally {
+    $('mint').removeAttribute('aria-busy')
+  }
+}
+
+async function waitFor(hash) {
+  for (let i = 0; i < 90; i++) {
+    const receipt = await rpc('eth_getTransactionReceipt', [hash])
+    if (receipt) return receipt
+    await new Promise((r) => setTimeout(r, 2000))
+  }
+  return null
+}
+
+// refresh(id) only emits ERC-4906 MetadataUpdate, so marketplaces fetch the art again. Anyone may call it.
+async function redraw() {
+  if (!account || !mineId) return
+  const btn = $('refresh')
+  btn.disabled = true
+  btn.setAttribute('aria-busy', 'true')
+  try {
+    await switchChain()
+    say('Confirm in your wallet. It only asks marketplaces to redraw your odometer.')
+    const hash = await window.ethereum.request({ method: 'eth_sendTransaction', params: [{ from: account, to: CFG.address, data: SEL.refresh + word(mineId) }] })
+    const receipt = await waitFor(hash)
+    if (!receipt || receipt.status !== '0x1') throw new Error('The refresh did not go through.')
+    say('Done. Marketplaces will redraw it on their next fetch.', 'good')
+  } catch (e) {
+    say(e.message || 'The refresh did not go through.', 'bad')
+  } finally {
+    btn.disabled = false
+    btn.removeAttribute('aria-busy')
   }
 }
 
@@ -165,15 +213,17 @@ async function init() {
   if (!CFG.address) await fromImdDeployment()
   $('connect').onclick = connect
   $('mint').onclick = mint
+  $('refresh').onclick = redraw
   if (CFG.address) {
     $('mint').disabled = false
     const link = $('contract-link')
     link.href = CFG.explorer + '/address/' + CFG.address
-    link.textContent = CFG.address.slice(0, 6) + '…' + CFG.address.slice(-4)
+    link.textContent = short(CFG.address)
   } else {
+    $('contract-link').removeAttribute('target')
     say('The contract is not deployed yet.', 'bad')
   }
-  if (CFG.repo) $('repo-link').href = CFG.repo
+  if (CFG.repo) for (const id of ['repo-link', 'repo-link-2']) $(id).href = CFG.repo
   showSupply(); showRecent(); showLive()
   setInterval(showLive, 30_000)
   if (window.ethereum) window.ethereum.on?.('accountsChanged', () => location.reload())

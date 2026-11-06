@@ -2,13 +2,87 @@
 
 A free, fully on-chain odometer for **Squeektoshi**, the hamster whose wheel powers
 [Squeekchain](https://squeekchain.com). Every token remembers the wheel's settled work at the moment it was minted
-and shows how far he has run since, read live from SqueekCore on Sepolia. It naps when he naps, gets the zoomies
-when he does, and earns gear as the kilometres add up. Squeek holders get a gold frame.
+and shows how far he has run since, read live from SqueekCore on Sepolia (chain ID **11155111**). It naps when he naps,
+gets the zoomies when he does, and earns gear as the kilometres add up. Squeek holders get a water bottle in the cage.
 
 Built for the [Squeekchain Genesis Code Lane](https://squeekchain.com/genesis/code), in the "dynamic NFTs that
-evolve with the hamster" category. Testnet only. Not affiliated with Squeekchain.
+evolve with the hamster" category. This repository supplies the contract, tests, ABI export, deployment parameters,
+review handoff and the static site. Testnet only. Not affiliated with Squeekchain.
 
-![every stage, status and frame](docs/gallery.png)
+There is no owner, admin, fee, payout, token, pool, randomness service, proxy or upgrade path. The mint is free and
+plain ETH transfers revert.
+
+![every stage, status and bottle](docs/gallery.png)
+
+## Build and verify
+
+```sh
+forge build
+forge test
+forge fmt --check src test script
+python3 tools/export_abi.py --check
+FOUNDRY_PROFILE=fork forge test     # optional: against the real Squeekchain contracts on Sepolia at a pinned block
+```
+
+`foundry.toml` pins Solidity **0.8.26**, Cancun, optimizer 200 runs and `bytecode_hash = "none"`. OpenZeppelin
+Contracts 5.7.0 and forge-std 1.16.2 are vendored as plain files in `lib/` with their licenses: no submodules, no FFI,
+no remote imports, no environment variables. The default tests use local mocks of SqueekCore, SqueekNFT and
+SqueekStaking and need no RPC. Fuzz tests run 512 cases with the seed pinned in `foundry.toml`. The fork profile needs a
+Sepolia RPC (public by default). See [validation](docs/VALIDATION.md) for the recorded result, sizes and gas.
+
+## Website (`dist/` static site)
+
+![the site after a mint](docs/site.png)
+
+The site is plain HTML, CSS and JavaScript with no build step, no framework and no libraries: `dist/` is the site and
+is what gets pinned to IPFS. It reads Sepolia from the browser through the public RPC in `dist/config.js`; only the
+mint and the optional redraw go through the visitor's wallet. The LED board and the numbers beside it come from
+[Squeekchain's public API](https://docs.squeekchain.com/developers/api/). There is no server, indexer, key or analytics,
+and the fonts are bundled (`dist/fonts/`, SIL OFL). Design tokens and components are in [DESIGN.md](DESIGN.md).
+
+- The contract address and deployment block come from `dist/config.js`, or, when IMD hosts the site, from
+  `imd-deployment.json` next to the page.
+- `dist/samples/`, `dist/placeholder.svg` and `dist/favicon.svg` are the contract's own SVG, written by
+  `FOUNDRY_PROFILE=gallery forge script script/Gallery.s.sol`.
+- Serve it locally with `python3 -m http.server -d dist`.
+
+## Contracts and deployment parameters
+
+Deploy one contract in the launch's single factory transaction. The constructor is nonpayable, takes only static
+arguments, makes no external calls and reverts outside Sepolia (local chain 31337 is allowed for tests).
+
+| Contract | Constructor arguments in declaration order |
+| --- | --- |
+| `SqueekOdometer` | `core_ = 0xFD6C166D4B8E2962E65746a13e5a0797CD4dE0c4` (SqueekCore), `squeeks_ = 0xC4C7982657f00509548F3a3a41db7FA439a6856B` (SqueekNFT), `staking_ = 0x50fd1780526C3186A0c037c7622203bC4fb611ca` (SqueekStaking) |
+
+The three addresses are Squeekchain's Sepolia release `core-sepolia-20261103`
+([deployments](https://docs.squeekchain.com/developers/#deployments)) and are immutable. There is no `$owner` argument:
+the contract has no privileged role. No initialization call, no funding, no launch token, distributor or pool.
+`launch.json` carries the same parameters. Runtime size is **23,212 bytes**; deployment measured **5,126,572 gas** on a
+local chain, with a conservative factory estimate of **39,960,400 gas**. [IMD_JOB.md](docs/IMD_JOB.md) is the text for
+the IMD launch request.
+
+## Architecture and authorization
+
+- **SqueekOdometer** (`src/SqueekOdometer.sol`): an OpenZeppelin 5 ERC-721 with ERC-4906. Stores per token only the
+  SqueekCore work and the block time at mint; everything else is read on every `tokenURI` / `reading` call.
+- **OdometerArt** (`src/art/OdometerArt.sol`) and **Sprites** (`src/art/Sprites.sol`): an internal library that turns a
+  `Reading` into the SVG and the JSON. Pure functions, no storage.
+- **ISqueek** (`src/interfaces/ISqueek.sol`): the three read-only Squeekchain interfaces it uses.
+
+Who can do what:
+
+- `mint()`: anyone, once per wallet (`idOf` remembers the wallet's token even after it is sent away), 9,999 in total,
+  free. Acts for `msg.sender` only; uses `_mint`, so there is no receiver callback. Reverts if SqueekCore cannot be
+  read, so every token starts from a real reading.
+- `refresh(id)` and `refreshAll()`: anyone, free. They only emit ERC-4906 `MetadataUpdate` / `BatchMetadataUpdate`
+  so marketplaces fetch the art again.
+- Transfers and approvals: standard, unmodified OpenZeppelin.
+- Nothing else writes. No owner, admin, pause, upgrade, payable function, `receive` or withdrawal.
+
+Every Squeekchain read is a gas-capped `staticcall` that copies a fixed number of words, so a broken or hostile
+dependency can only fail its own read; `tokenURI` never reverts for an existing token. [Security handoff](docs/SECURITY.md)
+has the full reasoning, [ABI](docs/ABI.md) the client interface and [errors](docs/ERRORS.md) what each revert means.
 
 ## How a token reads the wheel
 
@@ -27,64 +101,34 @@ to token.
 | The odometer (rolled at mint) | Display, each drawn its own way: Green LCD (dark digits on grey-green) 30%, Amber 25%, Red LED (a dot matrix) 18%, Ice VFD (over a dot grid) 15%, Nixie (with a glow) 9%, Mechanical (a light counter, last digit red) 3%. Casing: Cream 35%, Silver 30%, Charcoal 25%, Signal Orange 10%. Treat in his paws: none 45%, sunflower seed 30%, berry 15%, coin 8%, diamond 2%. |
 
 Odometers count settled work only, so they move a few minutes after the wheel does. Marketplaces cache images, so
-`refresh(id)` and `refreshAll()` (free, anyone) emit ERC-4906 events that ask them to fetch the art again.
-
-## Contract
-
-`src/SqueekOdometer.sol`, an OpenZeppelin ERC-721 with ERC-4906 support.
-
-- `mint()`: free, one per wallet (`idOf` remembers the wallet's token even after it is sent away), 9,999 in total.
-  Reverts if SqueekCore cannot be read, so every token starts from a real reading.
-- `reading(id)`: the live values behind a token. `tokenURI(id)`: JSON with an SVG image, both base64 data URIs.
-- No owner, no admin, no pause, no upgrade, nothing payable, no withdrawal.
-- Every Squeekchain read is a gas-capped static call that copies a fixed number of words, so a broken or hostile
-  dependency can only fail its own read; `tokenURI` never reverts for an existing token.
-- The constructor takes the three Squeekchain addresses and reverts outside Sepolia (local chain 31337 is allowed for
-  tests). It makes no external calls.
-
-Squeekchain contracts used (Sepolia, release `core-sepolia-20261103`,
-[deployments](https://docs.squeekchain.com/developers/#deployments)):
-
-| Contract | Address |
-|---|---|
-| SqueekCore | `0xFD6C166D4B8E2962E65746a13e5a0797CD4dE0c4` |
-| SqueekNFT (Squeeks) | `0xC4C7982657f00509548F3a3a41db7FA439a6856B` |
-| SqueekStaking | `0x50fd1780526C3186A0c037c7622203bC4fb611ca` |
-
-`launch.json` carries the same arguments for an IMD deployment.
+`refresh(id)` and `refreshAll()` ask them to fetch the art again.
 
 ## Art
 
 A 40×40 pixel scene in SVG, drawn on chain. `tools/sprites.py` holds Squeektoshi (running, ears back, curled up
-asleep, two leg frames), the wheel (clean midpoint circles, spokes and tread rungs in two frames), each stage's gear,
-bedding, moon, stars and z's, dust, the water bottle, the pouch treats, confetti, the rim pips and a 3×5 font and writes them to
-`src/art/Sprites.sol` as run data; `src/art/OdometerArt.sol` turns each color group into one SVG path through a
-write-once buffer, so a render costs linear gas.
+asleep, two leg frames), the wheel (clean midpoint circles, spokes and tread rungs in three frames), each stage's gear,
+bedding, moon, stars and z's, dust, the water bottle, the pouch treats, confetti, the rim pips and a 3×5 font, and
+writes them to `src/art/Sprites.sol` as run data; `src/art/OdometerArt.sol` turns each color group into one SVG path
+through a write-once buffer, so a render costs linear gas.
 
 ```sh
-python tools/sprites.py                                      # regenerate Sprites.sol (and Pillow previews)
+python3 tools/sprites.py                                     # regenerate Sprites.sol (and Pillow previews)
 FOUNDRY_PROFILE=gallery forge script script/Gallery.s.sol    # the contract's own SVG for every combination
 ```
 
-## Build and test
+## After launch
 
-Solidity 0.8.26 (`evm_version = "cancun"`), optimizer on, `bytecode_hash = "none"`. OpenZeppelin Contracts 5.7.0 and
-forge-std 1.16.2 are vendored as plain files in `lib/`: no submodules, no FFI, no network for the default tests.
+1. **Deployment service:** review, deploy `SqueekOdometer` with the arguments above, verify the source on the explorer,
+   and write the address and deployment block into `dist/config.js` (or ship `imd-deployment.json` next to the page).
+2. **Site:** pin `dist/` to IPFS. If member sites are closed, any static host works, for example GitHub Pages from
+   `dist/`.
+3. **Anyone:** mint once per wallet; call `refresh(id)` or `refreshAll()` when a marketplace shows a stale image.
+4. **If Squeekchain redeploys SqueekCore:** existing tokens keep reading the old address. There is no owner to repoint
+   them; a new deployment of this contract would be needed.
 
-```sh
-forge build
-forge test                       # mint rules, distance/stage/status math (fuzzed), holder detection, failing
-                                 # dependencies, art and metadata
-FOUNDRY_PROFILE=fork forge test  # against the real Squeekchain contracts on Sepolia at a pinned block
-```
-
-## Site
-
-`site/` is one static page with no build step and no libraries: connect a wallet, mint, see your odometer, the
-wheel's live state from [Squeekchain's public API](https://docs.squeekchain.com/developers/api/), and the latest
-mints. Reads go through a public Sepolia RPC. The contract address comes from `site/config.js`, or from
-`imd-deployment.json` next to the page when IMD hosts it.
+No wallet key, signer, keeper, fee, funding or external service account is needed to operate it.
 
 ## License
 
-MIT. OpenZeppelin Contracts and forge-std keep their own licenses in `lib/`.
+MIT. OpenZeppelin Contracts and forge-std keep their own licenses in `lib/`; IBM Plex Mono and Barlow Condensed in
+`dist/fonts/` are under the SIL Open Font License 1.1.

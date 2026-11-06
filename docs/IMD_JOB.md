@@ -17,7 +17,7 @@ paid on a mainnet can still deploy on Sepolia (`chainId` 11155111). The Sepolia 
   with `POST /requests/import` first (the launch page does this for you).
 - On chain: `evm_contracts`, chain id `11155111`, contract `SqueekOdometer`; constructor arguments in `launch.json`.
   No `owner` field: the contract has no privileged role.
-- Site: `site/` as the static site, IPFS label `squeek-odometer`.
+- Site: `dist/` as the static site (no build step), IPFS label `squeek-odometer`.
 
 Objective to paste (it is under the 8,000-character limit):
 
@@ -31,7 +31,10 @@ SqueekCore's cumulativeWork at mint and renders, in tokenURI, how far Squeektosh
 
 Contracts: one contract, src/SqueekOdometer.sol (with src/art/*, src/Types.sol, src/interfaces/ISqueek.sol). Foundry,
 solc 0.8.26, evm_version cancun, bytecode_hash = "none", dependencies vendored in lib/ (no submodules, no FFI).
-Checks: forge build; forge test (25 tests, no network); FOUNDRY_PROFILE=fork forge test needs a Sepolia RPC.
+Checks: forge build; forge test (37 tests, no network, pinned fuzz seed); forge fmt --check src test script;
+python3 tools/export_abi.py --check; FOUNDRY_PROFILE=fork forge test needs a Sepolia RPC. Runtime 23,212 bytes;
+deployment measured 5,126,572 gas (conservative factory estimate 39,960,400). Details in docs/VALIDATION.md, the
+builder's security notes in docs/SECURITY.md.
 
 Deploy: SqueekOdometer on Sepolia (11155111) with the constructor arguments from launch.json, in order:
 SqueekCore 0xFD6C166D4B8E2962E65746a13e5a0797CD4dE0c4, SqueekNFT 0xC4C7982657f00509548F3a3a41db7FA439a6856B,
@@ -42,13 +45,13 @@ Review: an independent adversarial review of the contract before deployment. Poi
 per wallet with a 9,999 cap; every Squeekchain read is a gas-capped staticcall that copies a fixed number of words
 (_read), so tokenURI cannot revert for an existing token; no privileged role or payable path exists.
 
-Site: site/ is a static page with no build step (index.html, app.js, style.css, config.js, svg assets). Publish it as
-is to IPFS with the label squeek-odometer, with the deployed SqueekOdometer address and deployment block written into
-site/config.js (address, fromBlock); app.js also reads imd-deployment.json next to the page if config.js has no address.
-Do not change the contract or the art.
+Site: dist/ is the static site with no build step (index.html, app.js, led.js, style.css, config.js, fonts/,
+samples/, svg assets; design in DESIGN.md). Publish it as is to IPFS with the label squeek-odometer, with the deployed
+SqueekOdometer address and deployment block written into dist/config.js (address, fromBlock); app.js also reads
+imd-deployment.json next to the page if config.js has no address. Do not change the contract or the art.
 ```
 
 ## If IMD cannot host the site
 
 IMD's docs say member sites are closed for now (`503 member_sites_closed`). The site is static, so it can be served
-from any host (for example GitHub Pages from `site/`) once `site/config.js` holds the deployed address and block.
+from any host (for example GitHub Pages from `dist/`) once `dist/config.js` holds the deployed address and block.

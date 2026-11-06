@@ -6,5 +6,5 @@ window.ODOMETER_CONFIG = {
   rpc: 'https://ethereum-sepolia-rpc.publicnode.com',
   explorer: 'https://sepolia.etherscan.io',
   api: 'https://api.squeekchain.com',
-  repo: '',
+  repo: 'https://github.com/am3en0x/squeek-odometer',
 }
