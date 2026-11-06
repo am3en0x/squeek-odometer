@@ -2,25 +2,16 @@
 pragma solidity 0.8.26;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 import {ISqueekCore, ISqueekNFT, ISqueekStaking} from "./interfaces/ISqueek.sol";
+import {Reading} from "./Types.sol";
+import {OdometerArt} from "./art/OdometerArt.sol";
 
 /// @title Squeek Odometer
 /// @notice A free, fully on-chain odometer for Squeektoshi, the hamster whose wheel powers Squeekchain. Each token
 /// remembers the wheel's settled work when it was minted and shows how far he has run since, read live from
 /// SqueekCore. No owner, no admin, no upgrade, no funds.
 contract SqueekOdometer is ERC721 {
-    /// @notice Everything a token shows, derived on every read.
-    struct Reading {
-        uint256 startWork; // SqueekCore cumulativeWork when the token was minted
-        uint256 work; // settled work since then (one unit = one wheel turn)
-        uint256 distanceMm; // work * MM_PER_WORK
-        uint8 stage; // 0 Newbie .. 6 Legend
-        uint8 status; // NAPPING, JOGGING, ZOOMIES or UNKNOWN
-        bool holder; // the token's owner holds a Squeek, in the wallet or deposited in staking
-        uint64 blockHeight; // Squeek block height
-        bool live; // SqueekCore answered
-    }
-
     uint256 public constant MAX_SUPPLY = 9_999;
     /// @notice Wheel distance per work unit. The device estimates distance from a fixed wheel circumference; its
     /// lifetime figures (22,789,368 mm over 25,701 units) give 886.7 mm, live speed/RPM readings about 880 mm.
@@ -91,6 +82,16 @@ contract SqueekOdometer is ERC721 {
         r.distanceMm = r.work * MM_PER_WORK;
         r.stage = stageOf(r.distanceMm);
         r.holder = _holds(owner);
+    }
+
+    /// @notice Metadata and art, rendered from the live reading on every call (nothing is stored but the start).
+    function tokenURI(uint256 id) public view override returns (string memory) {
+        return string.concat("data:application/json;base64,", Base64.encode(OdometerArt.json(id, reading(id))));
+    }
+
+    /// @notice ERC-4906 too: the art changes on its own, so marketplaces should refresh it.
+    function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
+        return interfaceId == 0x49064906 || super.supportsInterface(interfaceId);
     }
 
     /// @notice Stage for a distance: 0 Newbie, 1 Warm-up (1 km), 2 Jogger (5), 3 Runner (10), 4 Racer (25),

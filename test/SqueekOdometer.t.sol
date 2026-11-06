@@ -3,6 +3,7 @@ pragma solidity 0.8.26;
 
 import {Test, stdStorage, StdStorage} from "forge-std/Test.sol";
 import {SqueekOdometer} from "../src/SqueekOdometer.sol";
+import {Reading} from "../src/Types.sol";
 import {MockCore, MockNFT, MockStaking} from "./mocks/Mocks.sol";
 
 contract SqueekOdometerTest is Test {
@@ -80,7 +81,7 @@ contract SqueekOdometerTest is Test {
     function test_distanceAndStage() public {
         _mint(alice);
         core.set(12, 11_048 + 1_128, 1_300);
-        SqueekOdometer.Reading memory r = odo.reading(1);
+        Reading memory r = odo.reading(1);
         assertEq(r.work, 1_128);
         assertEq(r.distanceMm, 1_000_536);
         assertEq(r.stage, 1, "1 km is Warm-up");
@@ -107,7 +108,7 @@ contract SqueekOdometerTest is Test {
         extra = uint64(bound(extra, 0, 1e12));
         _mint(alice);
         core.set(12, 11_048 + extra, 1);
-        SqueekOdometer.Reading memory r = odo.reading(1);
+        Reading memory r = odo.reading(1);
         assertEq(r.distanceMm, uint256(extra) * 887);
         assertLe(r.stage, 6);
     }
@@ -147,7 +148,7 @@ contract SqueekOdometerTest is Test {
     function test_brokenCoreReadsUnknownAndKeepsTheStart() public {
         _mint(alice);
         core.setBroken(true);
-        SqueekOdometer.Reading memory r = odo.reading(1);
+        Reading memory r = odo.reading(1);
         assertFalse(r.live);
         assertEq(r.status, 3, "unknown");
         assertEq(r.startWork, 11_048);
