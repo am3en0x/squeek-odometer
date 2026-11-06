@@ -10,9 +10,16 @@ import {Reading} from "../src/Types.sol";
 contract Gallery is Script {
     function run() external {
         uint256[7] memory mm = [uint256(420_000), 1_070_000, 5_310_000, 12_730_000, 27_900_000, 58_120_000, 104_660_000];
-        string memory html = '<!doctype html><meta charset="utf-8"><body style="background:#000;margin:8px">';
+        string[7] memory stages = ["Newbie", "Warm-up", "Jogger", "Runner", "Racer", "Marathoner", "Legend"];
+        string[4] memory statuses = ["Jogging", "Zoomies", "Napping", "Unknown (SqueekCore unreadable)"];
+        string memory html = string.concat(
+            '<!doctype html><meta charset="utf-8"><title>Squeek Odometer gallery</title>',
+            '<body style="background:#0d1017;color:#e6e9ef;font:14px system-ui;margin:24px">',
+            "<h1 style=\"font:600 22px ui-monospace,monospace\">Squeek Odometer: every stage and status</h1>",
+            '<p style="color:#9aa3b5">Rendered by the contract itself. Odd rows: owner holds a Squeek (gold frame).</p>');
         for (uint8 stage; stage < 7; stage++) {
-            html = string.concat(html, "<div>");
+            html = string.concat(html, '<h2 style="font:600 15px ui-monospace,monospace;color:#9aa3b5;margin:22px 0 8px">',
+                stages[stage], stage % 2 == 1 ? " &middot; Squeek holder" : "", "</h2><div>");
             for (uint8 k; k < 4; k++) {
                 Reading memory r;
                 r.stage = stage;
@@ -20,8 +27,9 @@ contract Gallery is Script {
                 r.holder = stage % 2 == 1;
                 r.distanceMm = mm[stage];
                 r.live = r.status != 3;
-                html = string.concat(html, '<span style="display:inline-block;width:240px;height:240px;margin:4px">',
-                    string(OdometerArt.svg(r)), "</span>");
+                html = string.concat(html, '<figure style="display:inline-block;margin:0 14px 10px 0;text-align:center">',
+                    string(OdometerArt.svg(r)), '<figcaption style="color:#9aa3b5;font:12px ui-monospace,monospace">',
+                    statuses[k], "</figcaption></figure>");
             }
             html = string.concat(html, "</div>");
         }
