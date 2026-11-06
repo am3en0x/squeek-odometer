@@ -44,8 +44,8 @@ and its art and traits change as he runs, naps and crosses distance milestones.
 - `mint()`: free, one per wallet (`minted[msg.sender]`), `MAX_SUPPLY = 9_999`, sequential ids from 1. Stores
   `startWork[id] = core.state().cumulativeWork` and `mintedAt[id] = block.timestamp`. If SqueekCore cannot be read,
   the mint reverts (a token must have a real starting point). Emits `Minted(id, owner, startWork)`.
-- Reads that can fail (`try`/`catch` with a gas cap) never make `tokenURI` revert: on failure the token shows the
-  last known shape with status "unknown".
+- Reads that can fail (gas-capped static calls that copy a fixed number of words) never make `tokenURI` revert: if
+  SqueekCore cannot be read, the token keeps its start work, shows no distance and the status "unknown".
 - Derived values for a token:
   - `workSince = core.cumulativeWork - startWork` (never negative; 0 if the core went backwards).
   - `distance mm = workSince * 887`; shown as km with two decimals.
