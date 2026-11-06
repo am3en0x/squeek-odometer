@@ -14,8 +14,10 @@ fuzz = { runs = 512 }
 # Against Sepolia: forge test --profile fork (needs an RPC that serves historical state)
 [profile.fork]
 match_path = "test/fork/*"
-no_match_path = ""
-eth_rpc_url = "https://ethereum-sepolia-rpc.publicnode.com"
+no_match_path = "test/mocks/*"
+
+[rpc_endpoints]
+sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
 
 # The art of every stage x status x holder from the contract itself: forge script script/Gallery.s.sol --profile gallery
 [profile.gallery]
