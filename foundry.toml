@@ -9,7 +9,13 @@ optimizer = true
 optimizer_runs = 200
 bytecode_hash = "none"
 no_match_path = "test/fork/*"
-fuzz = { runs = 512 }
+
+[profile.default.fuzz]
+runs = 512
+seed = "0x0ab8c2222aac46ead67626443e3bee9ecc417ccea521825751dd0adc52d13b3b"
+
+[fmt]
+line_length = 120
 
 # Against Sepolia: forge test --profile fork (needs an RPC that serves historical state)
 [profile.fork]
@@ -21,4 +27,4 @@ sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
 
 # The art of every stage x status x holder from the contract itself: forge script script/Gallery.s.sol --profile gallery
 [profile.gallery]
-fs_permissions = [{ access = "write", path = "./previews" }, { access = "write", path = "./site" }]
+fs_permissions = [{ access = "write", path = "./previews" }, { access = "write", path = "./dist" }]

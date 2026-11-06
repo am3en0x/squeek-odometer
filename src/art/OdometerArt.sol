@@ -42,10 +42,23 @@ library OdometerArt {
         bool zoom = r.status == ZOOMIES;
         string memory spin = _ms(_spinMs(r.pace));
         string memory step = _ms(_spinMs(r.pace) * 2 / 3);
-        _add(b, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 8 32 32" width="480" height="480" shape-rendering="crispEdges">');
-        _add(b, abi.encodePacked('<rect width="40" height="40" fill="', _pick("#374559#2f5d62#4a6a3a#2e5a7a#6e2f4f#4b3f72#2a2346", r.stage), '"/>'));
+        _add(
+            b,
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 8 32 32" width="480" height="480" shape-rendering="crispEdges">'
+        );
+        _add(
+            b,
+            abi.encodePacked(
+                '<rect width="40" height="40" fill="',
+                _pick("#374559#2f5d62#4a6a3a#2e5a7a#6e2f4f#4b3f72#2a2346", r.stage),
+                '"/>'
+            )
+        );
         // a faint dot grid, in the spirit of Squeekchain's dotted pixels; a dimmer one for a VFD screen
-        _add(b, '<defs><pattern id="g" width="4" height="4" patternUnits="userSpaceOnUse"><rect x="2" y="2" width="1" height="1" fill="#fff" opacity=".09"/></pattern><pattern id="v" width="1" height="1" patternUnits="userSpaceOnUse"><rect width=".4" height=".4" fill="#14505c"/></pattern></defs><rect width="40" height="40" fill="url(#g)"/>');
+        _add(
+            b,
+            '<defs><pattern id="g" width="4" height="4" patternUnits="userSpaceOnUse"><rect x="2" y="2" width="1" height="1" fill="#fff" opacity=".09"/></pattern><pattern id="v" width="1" height="1" patternUnits="userSpaceOnUse"><rect width=".4" height=".4" fill="#14505c"/></pattern></defs><rect width="40" height="40" fill="url(#g)"/>'
+        );
 
         // the wheel turns one way at his pace while he runs and stands still while he sleeps; a pip for every 100 km
         // past the first 100
@@ -80,12 +93,18 @@ library OdometerArt {
         _treat(b, r.pouch, awake, look);
         _gear(b, id, r.stage, awake, step, look);
         if (r.status == NAPPING) {
-            _add(b, '<g opacity=".6"><animateTransform attributeName="transform" type="translate" values="0 0;0 -1;0 -2" dur="2.4s" calcMode="discrete" repeatCount="indefinite"/>');
+            _add(
+                b,
+                '<g opacity=".6"><animateTransform attributeName="transform" type="translate" values="0 0;0 -1;0 -2" dur="2.4s" calcMode="discrete" repeatCount="indefinite"/>'
+            );
             _layer(b, Sprites.ZZZ, look);
             _add(b, "</g>");
         }
         if (_justLevelled(r)) {
-            _add(b, '<g><animateTransform attributeName="transform" type="translate" values="0 0;0 1;0 2" dur="1.2s" calcMode="discrete" repeatCount="indefinite"/>');
+            _add(
+                b,
+                '<g><animateTransform attributeName="transform" type="translate" values="0 0;0 1;0 2" dur="1.2s" calcMode="discrete" repeatCount="indefinite"/>'
+            );
             _layer(b, Sprites.CONFETTI, look);
             _add(b, "</g>");
         }
@@ -101,11 +120,19 @@ library OdometerArt {
         bytes memory image = bytes(Base64.encode(svg(id, r)));
         Buf memory b = _buf(image.length + 2_560);
         _add(b, abi.encodePacked('{"name":"Squeek Odometer #', id.toString(), '",'));
-        _add(b, '"description":"An odometer bolted to Squeektoshi\'s wheel. It counts how far the hamster has run since it was minted, read live from SqueekCore on Sepolia (887 mm a wheel turn), spins at his real pace, sleeps when he sleeps, and earns him gear at 1, 5, 10, 25, 50 and 100 km. Free, fully on-chain, no owner.",');
+        _add(
+            b,
+            '"description":"An odometer bolted to Squeektoshi\'s wheel. It counts how far the hamster has run since it was minted, read live from SqueekCore on Sepolia (887 mm a wheel turn), spins at his real pace, sleeps when he sleeps, and earns him gear at 1, 5, 10, 25, 50 and 100 km. Free, fully on-chain, no owner.",'
+        );
         _add(b, '"image":"data:image/svg+xml;base64,');
         _add(b, image);
         _add(b, '","attributes":[');
-        _add(b, abi.encodePacked('{"trait_type":"Distance (km)","display_type":"number","value":', kmText(r.distanceMm), "},"));
+        _add(
+            b,
+            abi.encodePacked(
+                '{"trait_type":"Distance (km)","display_type":"number","value":', kmText(r.distanceMm), "},"
+            )
+        );
         _add(b, abi.encodePacked('{"trait_type":"Stage","value":"', stageName(r.stage), '"},'));
         _add(b, abi.encodePacked('{"trait_type":"Status","value":"', statusName(r.status), '"},'));
         _add(b, abi.encodePacked('{"trait_type":"Display","value":"', displayName(r.display), '"},'));
@@ -113,9 +140,26 @@ library OdometerArt {
         _add(b, abi.encodePacked('{"trait_type":"Treat","value":"', pouchName(r.pouch), '"},'));
         _add(b, abi.encodePacked('{"trait_type":"Squeek Holder","value":"', r.holder ? "Yes" : "No", '"},'));
         _add(b, abi.encodePacked('{"trait_type":"Water Bottle","value":"', frameName(r.tier), '"},'));
-        _add(b, abi.encodePacked('{"trait_type":"Pace (turns / 30 min)","display_type":"number","value":', r.pace.toString(), "},"));
-        _add(b, abi.encodePacked('{"trait_type":"Start Work","display_type":"number","value":', r.startWork.toString(), "},"));
-        _add(b, abi.encodePacked('{"trait_type":"Squeek Block Height","display_type":"number","value":', uint256(r.blockHeight).toString(), "}"));
+        _add(
+            b,
+            abi.encodePacked(
+                '{"trait_type":"Pace (turns / 30 min)","display_type":"number","value":', r.pace.toString(), "},"
+            )
+        );
+        _add(
+            b,
+            abi.encodePacked(
+                '{"trait_type":"Start Work","display_type":"number","value":', r.startWork.toString(), "},"
+            )
+        );
+        _add(
+            b,
+            abi.encodePacked(
+                '{"trait_type":"Squeek Block Height","display_type":"number","value":',
+                uint256(r.blockHeight).toString(),
+                "}"
+            )
+        );
         _add(b, "]}");
         return _done(b);
     }
@@ -211,7 +255,10 @@ library OdometerArt {
     /// @dev One piece of gear per stage, the earlier one taken off: a sweat drop (and the wristband on his legs), a
     /// headband with a flapping knot, shoes (on his legs), a race bib with the token's last digit, a medal, then a
     /// cape and a crown. Asleep, only the headband and the crown stay on.
-    function _gear(Buf memory b, uint256 id, uint8 stage, bool awake, string memory step, Look memory look) private pure {
+    function _gear(Buf memory b, uint256 id, uint8 stage, bool awake, string memory step, Look memory look)
+        private
+        pure
+    {
         if (stage == 1 && awake) _layer(b, Sprites.SWEAT, look);
         if (stage == 2) {
             if (awake) _frames2(b, Sprites.HEADBAND_0, Sprites.HEADBAND_1, step, look);
@@ -241,7 +288,9 @@ library OdometerArt {
         uint256 n = hundreds - 1 > 12 ? 12 : hundreds - 1;
         bytes memory p = Sprites.PIPS;
         _add(b, '<path stroke="#ffe089" d="');
-        for (uint256 k; k < n; k++) _add(b, _run(uint8(p[2 * k]), uint8(p[2 * k + 1]), 1));
+        for (uint256 k; k < n; k++) {
+            _add(b, _run(uint8(p[2 * k]), uint8(p[2 * k + 1]), 1));
+        }
         _add(b, '"/>');
     }
 
@@ -251,28 +300,60 @@ library OdometerArt {
     function _odometer(Buf memory b, Reading memory r) private pure {
         uint8 c = r.casing > 3 ? 3 : r.casing;
         uint8 d = r.display > 5 ? 5 : r.display;
-        _add(b, abi.encodePacked('<rect x="6" y="33" width="28" height="7" fill="', _pick("#e2d6bc#d9dee6#2a2d33#e8823a", c),
-            '"/><rect x="6" y="33" width="28" height="1" fill="', _pick("#f4ecd9#f2f4f7#44484f#f5a46a", c),
-            '"/><rect x="6" y="39" width="28" height="1" fill="', _pick("#b8aa8c#a8afba#17191c#b45f22", c),
-            '"/><rect x="8" y="34" width="24" height="5" fill="', _pick("#8f8268#7e8592#0d0e10#8a4416", c), '"/>'));
-        _add(b, abi.encodePacked('<rect x="9" y="34" width="22" height="5" fill="', _pick("#9fb58a#1d1405#1a0606#06161a#150a05#ece6d6", d), '"/>'));
+        _add(
+            b,
+            abi.encodePacked(
+                '<rect x="6" y="33" width="28" height="7" fill="',
+                _pick("#e2d6bc#d9dee6#2a2d33#e8823a", c),
+                '"/><rect x="6" y="33" width="28" height="1" fill="',
+                _pick("#f4ecd9#f2f4f7#44484f#f5a46a", c),
+                '"/><rect x="6" y="39" width="28" height="1" fill="',
+                _pick("#b8aa8c#a8afba#17191c#b45f22", c),
+                '"/><rect x="8" y="34" width="24" height="5" fill="',
+                _pick("#8f8268#7e8592#0d0e10#8a4416", c),
+                '"/>'
+            )
+        );
+        _add(
+            b,
+            abi.encodePacked(
+                '<rect x="9" y="34" width="22" height="5" fill="',
+                _pick("#9fb58a#1d1405#1a0606#06161a#150a05#ece6d6", d),
+                '"/>'
+            )
+        );
         if (d == 3) _add(b, '<rect x="9" y="34" width="22" height="5" fill="url(#v)"/>');
         bytes memory t = r.live ? kmText(r.distanceMm) : bytes("?");
         uint256 w;
-        for (uint256 i; i < t.length; i++) w += uint8(Sprites.glyph(t[i])[0]) + 1;
+        for (uint256 i; i < t.length; i++) {
+            w += uint8(Sprites.glyph(t[i])[0]) + 1;
+        }
         uint256 x0 = 30 - w;
-        if (d == 4) _digits(b, t, x0, '<path stroke="#5a2810" stroke-width="3" stroke-linecap="square" d="', false, false);
+        if (d == 4) {
+            _digits(b, t, x0, '<path stroke="#5a2810" stroke-width="3" stroke-linecap="square" d="', false, false);
+        }
         bool counter = d == 5;
-        _digits(b, t, x0, abi.encodePacked('<path stroke="', _pick("#1d2b1d#ffb000#ff4a4a#5ef2ff#ff7a2f#1b1b1b", d),
-            d == 2 ? '" stroke-width=".7" stroke-linecap="round" shape-rendering="auto" d="' : '" d="'),
-            d == 2, counter);
+        _digits(
+            b,
+            t,
+            x0,
+            abi.encodePacked(
+                '<path stroke="',
+                _pick("#1d2b1d#ffb000#ff4a4a#5ef2ff#ff7a2f#1b1b1b", d),
+                d == 2 ? '" stroke-width=".7" stroke-linecap="round" shape-rendering="auto" d="' : '" d="'
+            ),
+            d == 2,
+            counter
+        );
     }
 
     /// @dev One path of digits, as squares or (LED) as round dots; a counter leaves its last digit to a red path.
     function _digits(Buf memory b, bytes memory t, uint256 x, bytes memory open, bool dots, bool counter) private pure {
         _add(b, open);
         uint256 n = counter ? t.length - 1 : t.length;
-        for (uint256 i; i < n; i++) x = _glyph(b, t[i], x, 34, dots);
+        for (uint256 i; i < n; i++) {
+            x = _glyph(b, t[i], x, 34, dots);
+        }
         _add(b, '"/>');
         if (counter) {
             _add(b, '<path stroke="#c0392b" d="');
@@ -282,26 +363,47 @@ library OdometerArt {
     }
 
     /// @dev Two frames shown one after another every `dur`; the first starts visible, so a still render shows it.
-    function _frames2(Buf memory b, bytes memory f0, bytes memory f1, string memory dur, Look memory look) private pure {
+    function _frames2(Buf memory b, bytes memory f0, bytes memory f1, string memory dur, Look memory look)
+        private
+        pure
+    {
         _frame(b, f0, "1", "1;0", dur, look);
         _frame(b, f1, "0", "0;1", dur, look);
     }
 
-    function _frames3(Buf memory b, bytes memory f0, bytes memory f1, bytes memory f2, string memory dur, Look memory look)
-        private
-        pure
-    {
+    function _frames3(
+        Buf memory b,
+        bytes memory f0,
+        bytes memory f1,
+        bytes memory f2,
+        string memory dur,
+        Look memory look
+    ) private pure {
         _frame(b, f0, "1", "1;0;0", dur, look);
         _frame(b, f1, "0", "0;1;0", dur, look);
         _frame(b, f2, "0", "0;0;1", dur, look);
     }
 
-    function _frame(Buf memory b, bytes memory f, string memory start, string memory values, string memory dur, Look memory look)
-        private
-        pure
-    {
-        _add(b, abi.encodePacked('<g opacity="', start, '"><animate attributeName="opacity" values="', values, '" dur="', dur,
-            '" calcMode="discrete" repeatCount="indefinite"/>'));
+    function _frame(
+        Buf memory b,
+        bytes memory f,
+        string memory start,
+        string memory values,
+        string memory dur,
+        Look memory look
+    ) private pure {
+        _add(
+            b,
+            abi.encodePacked(
+                '<g opacity="',
+                start,
+                '"><animate attributeName="opacity" values="',
+                values,
+                '" dur="',
+                dur,
+                '" calcMode="discrete" repeatCount="indefinite"/>'
+            )
+        );
         _layer(b, f, look);
         _add(b, "</g>");
     }
@@ -333,7 +435,9 @@ library OdometerArt {
             uint256 gy = y + uint8(g[o + 1]);
             uint256 n = uint8(g[o + 2]);
             if (dots) {
-                for (uint256 j; j < n; j++) _add(b, abi.encodePacked("M", (gx + j).toString(), ".4 ", gy.toString(), ".5h.2"));
+                for (uint256 j; j < n; j++) {
+                    _add(b, abi.encodePacked("M", (gx + j).toString(), ".4 ", gy.toString(), ".5h.2"));
+                }
             } else {
                 _add(b, _run(gx + Sprites.OFF, gy + Sprites.OFF, n));
             }
@@ -347,7 +451,9 @@ library OdometerArt {
     }
 
     function _coord(uint256 stored) private pure returns (bytes memory) {
-        return stored >= Sprites.OFF ? bytes((stored - Sprites.OFF).toString()) : abi.encodePacked("-", (Sprites.OFF - stored).toString());
+        return stored >= Sprites.OFF
+            ? bytes((stored - Sprites.OFF).toString())
+            : abi.encodePacked("-", (Sprites.OFF - stored).toString());
     }
 
     function _color(uint8 c, Look memory look) private pure returns (bytes memory) {
@@ -365,7 +471,9 @@ library OdometerArt {
 
     function _slice(bytes memory s, uint256 from, uint256 len) private pure returns (bytes memory out) {
         out = new bytes(len);
-        for (uint256 i; i < len; i++) out[i] = s[from + i];
+        for (uint256 i; i < len; i++) {
+            out[i] = s[from + i];
+        }
     }
 
     // ---------------------------------------------------------------- a write-once buffer

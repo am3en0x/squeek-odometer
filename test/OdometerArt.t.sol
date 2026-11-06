@@ -8,13 +8,33 @@ import {Reading} from "../src/Types.sol";
 import {MockCore, MockNFT, MockStaking} from "./mocks/Mocks.sol";
 
 contract ArtHarness {
-    function svg(Reading memory r) external pure returns (string memory) { return string(OdometerArt.svg(1, r)); }
-    function svgId(uint256 id, Reading memory r) external pure returns (string memory) { return string(OdometerArt.svg(id, r)); }
-    function json(uint256 id, Reading memory r) external pure returns (string memory) { return string(OdometerArt.json(id, r)); }
-    function km(uint256 mm) external pure returns (string memory) { return string(OdometerArt.kmText(mm)); }
-    function display(uint256 roll) external pure returns (uint8) { return OdometerArt.displayOf(roll); }
-    function casing(uint256 roll) external pure returns (uint8) { return OdometerArt.casingOf(roll); }
-    function pouch(uint256 roll) external pure returns (uint8) { return OdometerArt.pouchOf(roll); }
+    function svg(Reading memory r) external pure returns (string memory) {
+        return string(OdometerArt.svg(1, r));
+    }
+
+    function svgId(uint256 id, Reading memory r) external pure returns (string memory) {
+        return string(OdometerArt.svg(id, r));
+    }
+
+    function json(uint256 id, Reading memory r) external pure returns (string memory) {
+        return string(OdometerArt.json(id, r));
+    }
+
+    function km(uint256 mm) external pure returns (string memory) {
+        return string(OdometerArt.kmText(mm));
+    }
+
+    function display(uint256 roll) external pure returns (uint8) {
+        return OdometerArt.displayOf(roll);
+    }
+
+    function casing(uint256 roll) external pure returns (uint8) {
+        return OdometerArt.casingOf(roll);
+    }
+
+    function pouch(uint256 roll) external pure returns (uint8) {
+        return OdometerArt.pouchOf(roll);
+    }
 }
 
 contract OdometerArtTest is Test {
@@ -39,7 +59,10 @@ contract OdometerArtTest is Test {
         for (uint256 i; i + n.length <= h.length; i++) {
             bool ok = true;
             for (uint256 j; j < n.length; j++) {
-                if (h[i + j] != n[j]) { ok = false; break; }
+                if (h[i + j] != n[j]) {
+                    ok = false;
+                    break;
+                }
             }
             if (ok) return true;
         }
@@ -53,7 +76,14 @@ contract OdometerArtTest is Test {
         assertTrue(_has(s, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 8 32 32"'), "framed close on him");
         assertTrue(_has(s, 'fill="url(#g)"'), "the dot grid");
         bytes memory b = bytes(s);
-        assertEq(string(abi.encodePacked(b[b.length - 6], b[b.length - 5], b[b.length - 4], b[b.length - 3], b[b.length - 2], b[b.length - 1])), "</svg>");
+        assertEq(
+            string(
+                abi.encodePacked(
+                    b[b.length - 6], b[b.length - 5], b[b.length - 4], b[b.length - 3], b[b.length - 2], b[b.length - 1]
+                )
+            ),
+            "</svg>"
+        );
     }
 
     // ---- napping and running
@@ -73,7 +103,13 @@ contract OdometerArtTest is Test {
     function test_theWheelAndLegsRunAtHisPace() public view {
         // pace 600: a spin of 900 - 600/3 = 700 ms, steps two thirds of it; pace 1,800: 300 ms and 200 ms
         string memory jog = art.svg(_r(2, 1, 5_000_000));
-        assertTrue(_has(jog, '<animate attributeName="opacity" values="1;0;0" dur="700ms" calcMode="discrete" repeatCount="indefinite"/>'), "a three-frame spin");
+        assertTrue(
+            _has(
+                jog,
+                '<animate attributeName="opacity" values="1;0;0" dur="700ms" calcMode="discrete" repeatCount="indefinite"/>'
+            ),
+            "a three-frame spin"
+        );
         assertTrue(_has(jog, 'values="0;0;1"'));
         assertTrue(_has(jog, 'dur="466ms"'));
         string memory zoom = art.svg(_r(2, 2, 5_000_000));
@@ -153,7 +189,7 @@ contract OdometerArtTest is Test {
         assertTrue(_has(art.svg(r), '<path stroke="#ffb000"'), "amber digits");
         r.display = 2;
         assertTrue(_has(art.svg(r), 'stroke-linecap="round"'), "LED digits are round dots");
-        assertTrue(_has(art.svg(r), '.5h.2'));
+        assertTrue(_has(art.svg(r), ".5h.2"));
         r.display = 3;
         assertTrue(_has(art.svg(r), 'fill="url(#v)"'), "a VFD over its dot grid");
         r.display = 4;
@@ -162,7 +198,10 @@ contract OdometerArtTest is Test {
         string memory mech = art.svg(r);
         assertTrue(_has(mech, 'fill="#ece6d6"'), "a light mechanical counter");
         assertTrue(_has(mech, '<path stroke="#c0392b"'), "its last digit in red");
-        assertTrue(_has(mech, '<rect x="8" y="34" width="24" height="5" fill="#8f8268"/>'), "a bezel keeps the screen off the casing");
+        assertTrue(
+            _has(mech, '<rect x="8" y="34" width="24" height="5" fill="#8f8268"/>'),
+            "a bezel keeps the screen off the casing"
+        );
         r.casing = 3;
         assertTrue(_has(art.svg(r), "#e8823a"), "signal orange casing");
         assertFalse(_has(art.svg(r), "#d6334a"));
@@ -172,11 +211,22 @@ contract OdometerArtTest is Test {
     }
 
     function test_rollsHaveTheirRarities() public view {
-        assertEq(art.display(0), 0); assertEq(art.display(29), 0); assertEq(art.display(30), 1);
-        assertEq(art.display(96), 4); assertEq(art.display(97), 5); assertEq(art.display(99), 5);
-        assertEq(art.casing(34), 0); assertEq(art.casing(35), 1); assertEq(art.casing(65), 2); assertEq(art.casing(90), 3);
-        assertEq(art.pouch(44), 0); assertEq(art.pouch(45), 1); assertEq(art.pouch(89), 2);
-        assertEq(art.pouch(97), 3); assertEq(art.pouch(98), 4); assertEq(art.pouch(99), 4);
+        assertEq(art.display(0), 0);
+        assertEq(art.display(29), 0);
+        assertEq(art.display(30), 1);
+        assertEq(art.display(96), 4);
+        assertEq(art.display(97), 5);
+        assertEq(art.display(99), 5);
+        assertEq(art.casing(34), 0);
+        assertEq(art.casing(35), 1);
+        assertEq(art.casing(65), 2);
+        assertEq(art.casing(90), 3);
+        assertEq(art.pouch(44), 0);
+        assertEq(art.pouch(45), 1);
+        assertEq(art.pouch(89), 2);
+        assertEq(art.pouch(97), 3);
+        assertEq(art.pouch(98), 4);
+        assertEq(art.pouch(99), 4);
     }
 
     // ---- text and metadata
