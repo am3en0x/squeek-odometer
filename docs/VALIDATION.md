@@ -31,8 +31,10 @@ reading and `tokenURI`.
 The site in `dist/` was checked end to end on an anvil fork of Sepolia (block 12,078,256): deploy, two mints from the
 command line, a third through the page with a stand-in wallet that forwards to the fork; the supply went to 3 / 9,999,
 "your odometer" showed token #3 from `tokenURI`, the latest mints listed #3, #2, #1 from the `Minted` events, and
-"Ask marketplaces to redraw" sent `refresh(3)` and confirmed. The LED board and the live numbers read Squeekchain's
-API. Layout checked at 1280px and 390px (no horizontal scroll at 390px).
+"Ask marketplaces to redraw" sent `refresh(3)` and confirmed. The LED board read Squeekchain's API for the WHEEL
+readout and the minted token's `tokenURI` for YOURS (0.00 km right after the mint). The black redesign was checked the
+same way on a fresh fork (block 12,078,525). Layout checked at 1280px, 1600px and 390px, before and after a mint (no
+horizontal scroll at 390px).
 
 ### Sizes from `forge build --sizes`
 

@@ -36,8 +36,9 @@ Sepolia RPC (public by default). See [validation](docs/VALIDATION.md) for the re
 
 The site is plain HTML, CSS and JavaScript with no build step, no framework and no libraries: `dist/` is the site and
 is what gets pinned to IPFS. It reads Sepolia from the browser through the public RPC in `dist/config.js`; only the
-mint and the optional redraw go through the visitor's wallet. The LED board and the numbers beside it come from
-[Squeekchain's public API](https://docs.squeekchain.com/developers/api/). There is no server, indexer, key or analytics,
+mint and the optional redraw go through the visitor's wallet. The LED board in the first screen shows two odometers:
+WHEEL, from [Squeekchain's public API](https://docs.squeekchain.com/developers/api/), and YOURS, from your token's
+`tokenURI`. There is no server, indexer, key or analytics,
 and the fonts are bundled (`dist/fonts/`, SIL OFL). Design tokens and components are in [DESIGN.md](DESIGN.md).
 
 - The contract address and deployment block come from `dist/config.js`, or, when IMD hosts the site, from

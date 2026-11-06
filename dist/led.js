@@ -47,7 +47,7 @@
     '!': ['1', '1', '1', '1', '1', '0', '1'],
     ' ': ['00', '00', '00', '00', '00', '00', '00'],
   }
-  const C = { off: '#1f1f25', orange: '#f6a63b', cream: '#f3e9cc', grey: '#7d7d88', blue: '#8fa2ff', green: '#7fe08a', rim: '#9a9aa6' }
+  const C = { off: '#131316', orange: '#f6a63b', cream: '#f3e9cc', grey: '#6f6f7b', label: '#5c5c68', blue: '#8fa2ff', green: '#7fe08a', rim: '#8a8a96', dim: '#34343e', red: '#ff5a3c' }
   const textWidth = (s, k) => [...s].reduce((w, ch) => w + ((G[ch] || G[' '])[0].length + 1) * k, -k)
 
   const canvas = document.getElementById('led')
@@ -85,37 +85,104 @@
     for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) put(cx + i, cy + j, C.orange)
   }
 
-  // the sign's lines, top to bottom: [text, color, scale]
-  function lines() {
+  // The sign, top to bottom: his state, then two odometers (the whole wheel and yours), then the raw numbers.
+  // Each row has a height in dots, a gap after it, a width and a painter.
+  const PAD = 2
+  function layout() {
     const s = data.state
-    const big = cols >= 100 ? 2 : 1
-    const km = data.km != null ? data.km.toFixed(2) + ' KM' : '--.-- KM'
-    return [
-      ['SQUEEKTOSHI', C.orange, 1],
-      [s === 'running' ? 'IS RUNNING' : s === 'napping' ? 'IS NAPPING' : s === 'nosignal' ? 'NO SIGNAL' : 'TUNING IN',
-        s === 'running' ? C.green : s === 'napping' ? C.blue : C.cream, 1],
-      ['HAS RUN', C.grey, 1],
-      [km, C.cream, textWidth(km, big) <= cols - 4 ? big : 1],
-      [(data.rpm != null ? Math.round(data.rpm) : '--') + ' RPM', C.grey, 1],
-      ['BLOCK ' + (data.block != null ? data.block.toLocaleString('en-US') : '--'), C.grey, 1],
-    ]
-  }
-  const GAP = 2, PAD = 2
-  const height = (ls) => ls.reduce((h, l) => h + 7 * l[2] + GAP, 2 * PAD - GAP)
+    const st = 'SQUEEKTOSHI ' + (s === 'running' ? 'IS RUNNING' : s === 'napping' ? 'IS NAPPING' : s === 'nosignal' ? 'IS OFF AIR' : 'TUNING IN')
+    const stColor = s === 'running' ? C.green : s === 'napping' ? C.blue : C.cream
+    const out = []
+    const row = (h, gap, paint, w) => out.push({ h, gap, paint, w })
+    // leave room on the right for the wheel on wide boards
+    const avail = cols - 2 * PAD - (cols >= 150 ? 44 : 0)
 
-  function compose(ls) {
+    if (textWidth(st, 1) <= avail) row(7, 5, (y) => text(st, PAD, y, stColor), textWidth(st, 1))
+    else {
+      row(7, 2, (y) => text('SQUEEKTOSHI', PAD, y, stColor), textWidth('SQUEEKTOSHI', 1))
+      row(7, 5, (y) => text(st.slice(12), PAD, y, stColor), textWidth(st.slice(12), 1))
+    }
+
+    // both odometers share one size and one number of drums so their digits line up
+    const meters = [['WHEEL', data.km], ['YOURS', data.mine]]
+    const ints = meters.map(([, v]) => (v != null ? String(Math.floor(v)) : ''))
+    const need = Math.max(2, ...ints.map((i) => i.length))
+    const labelW = textWidth('WHEEL', 1) + 5
+    const unitW = 3 + textWidth('KM', 1)
+    let pick = null
+    for (const k of [3, 2, 1]) {
+      for (const inline of [true, false]) {
+        for (let drums = Math.max(4, need); drums >= need && !pick; drums--) {
+          const w = (inline ? labelW : 0) + textWidth('0'.repeat(drums) + '.00', k) + 2 + unitW
+          if (w <= avail) pick = { k, inline, drums, w }
+        }
+        if (pick) break
+      }
+      if (pick) break
+    }
+    if (!pick) pick = { k: 1, inline: false, drums: need, w: textWidth('0'.repeat(need) + '.00', 1) + unitW }
+    const { k, inline, drums } = pick
+    meters.forEach(([label, v], i) => {
+      const last = i === meters.length - 1
+      if (!inline) row(7, 2, (y) => text(label, PAD, y, C.label), textWidth(label, 1))
+      row(7 * k, last ? 6 : 5, (y) => {
+        if (inline) text(label, PAD, y + 7 * k - 7, C.label)
+        odometer(PAD + (inline ? labelW : 0), y, v, drums, k)
+      }, pick.w)
+    })
+
+    const rpm = (data.rpm != null ? Math.round(data.rpm) : '--') + ' RPM'
+    const bh = data.block != null ? data.block.toLocaleString('en-US') : '--'
+    const block = (textWidth('SQUEEK BLOCK ' + bh, 1) <= avail ? 'SQUEEK BLOCK ' : 'BLOCK ') + bh
+    if (textWidth(rpm + '   ' + block, 1) <= avail) {
+      row(7, 0, (y) => { text(rpm, PAD, y, C.label); text(block, PAD + textWidth(rpm + '   ', 1) + 1, y, C.label) }, textWidth(rpm + '   ' + block, 1))
+    } else {
+      row(7, 2, (y) => text(rpm, PAD, y, C.label), textWidth(rpm, 1))
+      row(7, 0, (y) => text(block, PAD, y, C.label), textWidth(block, 1))
+    }
+    return out
+  }
+
+  // One odometer readout: unlit-looking leading drums, the whole kilometres in cream and the hundredths in red, like
+  // the last drum of a mechanical odometer. No value yet: dim dashes.
+  function odometer(x, y, v, drums, k) {
+    const adv = (ch) => ((G[ch] || G[' '])[0].length + 1) * k
+    if (v == null) {
+      // one dash per drum, centred where its digit will be, so the empty readout lines up with the full one
+      const dash = (n) => { for (let i = 0; i < n; i++) { text('-', x + k, y, C.dim, k); x += adv('0') } }
+      dash(drums)
+      text('.', x, y, C.dim, k); x += adv('.')
+      dash(2)
+      text('KM', x + 2, y + 7 * k - 7, C.label)
+      return
+    }
+    const [int, frac] = v.toFixed(2).split('.')
+    const lead = drums - int.length
+    const whole = int.padStart(drums, '0')
+    ;[...whole].forEach((ch, i) => { text(ch, x, y, i < lead ? C.dim : C.cream, k); x += adv(ch) })
+    text('.', x, y, C.cream, k); x += adv('.')
+    const w = textWidth(frac, k)
+    text(frac, x, y, C.red, k)
+    x += w + k
+    text('KM', x + 2, y + 7 * k - 7, C.label)
+  }
+
+  const height = (rs) => rs.reduce((h, r) => h + r.h + r.gap, 2 * PAD)
+
+  function compose(rs) {
     lit = new Array(cols * rows).fill(null)
     let y = PAD, left = 0
-    for (const [s, color, k] of ls) {
-      text(s, PAD, y, color, k)
-      left = Math.max(left, textWidth(s, k))
-      y += 7 * k + GAP
+    for (const r of rs) {
+      r.paint(y)
+      left = Math.max(left, r.w)
+      y += r.h + r.gap
     }
-    // the wheel sits on the right when there is room for it; it stands still while he naps
-    const R = Math.min(17, Math.floor((rows - 6) / 2))
-    if (cols - left - PAD - 6 >= 2 * R + 4) {
-      wheel(cols - R - 4, Math.floor(rows / 2), R, turn)
-      if (data.state === 'napping' && tick % 2 === 0) text('Z', cols - 9, 1, C.blue)
+    // the wheel fills the free space on the right, as tall as the board; it stands still while he naps
+    const free = cols - left - PAD - 6
+    const rad = Math.min(Math.floor((rows - 4) / 2), Math.floor((free - 4) / 2))
+    if (rad >= 10) {
+      wheel(cols - rad - 4, Math.floor(rows / 2), rad, turn)
+      if (data.state === 'napping' && tick % 2 === 0) text('Z', cols - 8, 1, C.blue)
     }
   }
 
@@ -123,17 +190,17 @@
     const dpr = window.devicePixelRatio || 1
     const w = canvas.clientWidth
     if (!w) return
-    cols = Math.max(48, Math.floor(w / (w >= 700 ? 6.5 : w >= 520 ? 6 : 5)))
+    cols = Math.max(48, Math.floor(w / (w >= 900 ? 6 : w >= 520 ? 5 : 4.4)))
     pitch = w / cols
-    const ls = lines()
-    rows = height(ls)
+    const rs = layout()
+    rows = height(rs)
     const h = rows * pitch
     canvas.style.height = h + 'px'
     if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
       canvas.width = Math.round(w * dpr)
       canvas.height = Math.round(h * dpr)
     }
-    compose(ls)
+    compose(rs)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, h)
     const rad = pitch * 0.36
@@ -157,8 +224,9 @@
   function label() {
     const s = data.state
     const words = s === 'running' ? 'is running' : s === 'napping' ? 'is napping' : s === 'nosignal' ? 'cannot be reached' : 'is loading'
-    const km = data.km != null ? `, ${data.km.toFixed(2)} km run so far` : ''
-    canvas.setAttribute('aria-label', `LED board: Squeektoshi ${words}${km}.`)
+    const km = data.km != null ? `, the wheel has run ${data.km.toFixed(2)} km` : ''
+    const mine = data.mine != null ? `, yours ${data.mine.toFixed(2)} km` : ''
+    canvas.setAttribute('aria-label', `LED board: Squeektoshi ${words}${km}${mine}.`)
   }
 
   window.LedBoard = {

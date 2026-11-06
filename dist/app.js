@@ -46,8 +46,10 @@ async function showMine() {
   if (!account || !CFG.address) return
   const id = Number(BigInt(await call(SEL.idOf + word(account))))
   mineId = id
-  if (!id) { $('mint').disabled = false; $('mine-caption').textContent = 'Shows up here after you mint.'; return }
+  if (!id) { $('mint').disabled = false; $('mine-caption').textContent = 'Yours shows up here after you mint.'; return }
   const meta = await token(id)
+  window.LedBoard?.set({ mine: Number(trait(meta, 'Distance (km)')) })
+  $('mine').closest('figure').classList.add('minted')
   $('mine').src = meta.image
   $('mine').alt = `Your odometer, #${id}`
   $('mine-caption').textContent = `#${id} \u00b7 ${km(meta)} km since your mint \u00b7 ${trait(meta, 'Stage')} \u00b7 ${trait(meta, 'Status')}`
@@ -101,16 +103,13 @@ async function showLive() {
     const block = ((st.builder || {}).anchor || {}).blockHeight
     const state = !online ? 'nosignal' : rpm > 0 ? 'running' : 'napping'
     const kmRun = work != null ? (work * 887) / 1e6 : null
-    $('live-state').textContent = state === 'running' ? 'running' : state === 'napping' ? 'napping' : 'no signal'
-    $('live-state').className = state === 'running' ? 'on' : state === 'napping' ? 'off' : ''
-    $('live-rpm').textContent = online ? rpm.toFixed(0) + ' rpm' : '\u2013'
-    $('live-work').textContent = work != null ? work.toLocaleString('en-US') : '\u2013'
-    $('live-km').textContent = kmRun != null ? kmRun.toFixed(2) + ' km' : '\u2013'
-    $('live-height').textContent = block != null ? Number(block).toLocaleString('en-US') : '\u2013'
+    const doing = state === 'running' ? `is running at ${rpm.toFixed(0)} rpm` : state === 'napping' ? 'is napping' : 'is off the air'
+    const turns = work != null ? ` The wheel has turned ${work.toLocaleString('en-US')} times on this core, ${kmRun.toFixed(2)} km` : ''
+    const at = block != null ? ` by Squeek block ${Number(block).toLocaleString('en-US')}.` : turns ? '.' : ''
+    $('live-line').textContent = `Right now Squeektoshi ${doing}.${turns}${at}`
     led?.set({ state, km: kmRun, rpm: online ? rpm : null, block: block != null ? Number(block) : null })
   } catch {
-    $('live-state').textContent = 'unavailable'
-    for (const id of ['live-rpm', 'live-work', 'live-km', 'live-height']) $(id).textContent = '\u2013'
+    $('live-line').textContent = 'The wheel cannot be read right now.'
     led?.set({ state: 'nosignal' })
   }
 }
@@ -221,7 +220,8 @@ async function init() {
     link.textContent = short(CFG.address)
   } else {
     $('contract-link').removeAttribute('target')
-    say('The contract is not deployed yet.', 'bad')
+    $('mint').textContent = 'Mint opens at deploy'
+    say('The contract is not deployed yet.')
   }
   if (CFG.repo) for (const id of ['repo-link', 'repo-link-2']) $(id).href = CFG.repo
   showSupply(); showRecent(); showLive()
