@@ -220,4 +220,22 @@ contract SqueekOdometerTest is Test {
         core.setBroken(true);
         assertEq(odo.reading(1).pace, 0);
     }
+
+    // ---- ERC-4906: anyone can ask marketplaces to look again
+
+    event MetadataUpdate(uint256 _tokenId);
+    event BatchMetadataUpdate(uint256 _fromTokenId, uint256 _toTokenId);
+
+    function test_refreshEmitsMetadataUpdates() public {
+        _mint(alice);
+        _mint(bob);
+        vm.expectEmit(false, false, false, true);
+        emit MetadataUpdate(2);
+        odo.refresh(2);
+        vm.expectEmit(false, false, false, true);
+        emit BatchMetadataUpdate(1, 2);
+        odo.refreshAll();
+        vm.expectRevert();
+        odo.refresh(3);
+    }
 }

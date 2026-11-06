@@ -13,19 +13,21 @@ evolve with the hamster" category. Testnet only. Not affiliated with Squeekchain
 ## How a token reads the wheel
 
 Everything is computed in `tokenURI` on every call; only the starting point is stored per token. Squeektoshi is drawn
-by hand (a tan Syrian hamster in three fur shades, ears, eye light, pink paws); each token is an odometer bolted to his
-wheel, and it is the odometer that varies from token to token.
+by hand (a tan Syrian hamster in three fur shades, ears, eye light, pink paws) and framed close, with the top of his
+wheel cropped off; each token is an odometer bolted to the wheel's base, and it is the odometer that varies from token
+to token.
 
 | What | How |
 |---|---|
 | Distance | SqueekCore `cumulativeWork` now minus at mint, × **887 mm**. One work unit is one accepted magnet passage, i.e. one wheel turn. The device estimates distance from a fixed wheel circumference; Squeekchain's API lifetime figures (22,789,368 mm over 25,701 units) give 886.7 mm, live speed/RPM readings about 880 mm. |
 | Status | Work settled in the last three SqueekCore rounds (30 minutes, `roundPage`): none is **napping** (night falls, he curls up on his bedding, the wheel stops, z's float), under 1,500 is **jogging**, 1,500 or more is **zoomies** (ears pinned back, dust at his feet). If SqueekCore cannot be read, **unknown**. |
-| Pace | The same work sets the animation speed: the wheel turns in 900 ms when he barely moves, 400 ms at the zoomies line, never faster than 240 ms. Motion is frame by frame (discrete SMIL), so pixels stay crisp; a viewer without SMIL shows the first frame. |
-| Stage | Newbie, Warm-up at 1 km, Jogger 5, Runner 10, Racer 25, Marathoner 50, Legend 100. Each stage has one piece of gear (a sweat drop, a headband with a flapping knot, shoes, a race bib, a medal, a cape and crown), its own background, and the wheel goes steel, bronze, silver, gold. Confetti for the first 300 m of a new stage; past 100 km a pip lights on the rim for every further 100 km. |
-| Holder | If the owner holds a Squeek, his cage gets a water bottle: bronze, silver (Squeek power of a Level 3 in staking), gold (Level 5), diamond (Level 7). A Squeek only in the wallet counts as bronze. |
-| The odometer (rolled at mint) | Display: Green LCD 30%, Amber 25%, Red LED 18%, Ice VFD 15%, Nixie 9%, Mechanical 3%. Casing: Gunmetal 30%, Cream 25%, Mint 18%, Coral 15%, Lilac 9%, Gold 3%. Cheek pouch: empty 45%, sunflower seed 30%, berry 15%, coin 8%, diamond 2%. |
+| Pace | The same work sets the animation speed: the wheel turns one way (three frames, never a crosshair) in 900 ms when he barely moves, 400 ms at the zoomies line, never faster than 240 ms. Motion is frame by frame (discrete SMIL), so pixels stay crisp; a viewer without SMIL shows the first frame. |
+| Stage | Newbie, Warm-up at 1 km, Jogger 5, Runner 10, Racer 25, Marathoner 50, Legend 100. Each stage has one piece of gear (a wristband, a headband with a flapping knot, shoes, a race bib with the token's last digit, a medal, a cape on a clasp and a crown), its own background, and the wheel goes steel, bronze, silver, gold. Confetti for the first 300 m of a new stage; past 100 km a pip lights on the rim for every further 100 km. |
+| Holder | If the owner holds a Squeek, his cage gets a water bottle whose cap and clip are bronze, silver (Squeek power of a Level 3 in staking), gold (Level 5) or diamond (Level 7). A Squeek only in the wallet counts as bronze. |
+| The odometer (rolled at mint) | Display, each drawn its own way: Green LCD (dark digits on grey-green) 30%, Amber 25%, Red LED (a dot matrix) 18%, Ice VFD (over a dot grid) 15%, Nixie (with a glow) 9%, Mechanical (a light counter, last digit red) 3%. Casing: Cream 35%, Silver 30%, Charcoal 25%, Signal Orange 10%. Treat in his paws: none 45%, sunflower seed 30%, berry 15%, coin 8%, diamond 2%. |
 
-Odometers count settled work only, so they move a few minutes after the wheel does.
+Odometers count settled work only, so they move a few minutes after the wheel does. Marketplaces cache images, so
+`refresh(id)` and `refreshAll()` (free, anyone) emit ERC-4906 events that ask them to fetch the art again.
 
 ## Contract
 

@@ -36,6 +36,10 @@ contract SqueekOdometer is ERC721 {
     mapping(uint256 => uint256) public mintedAt;
 
     event Minted(uint256 indexed id, address indexed to, uint256 startWork);
+    /// @notice ERC-4906: the art changed. The art changes on its own as the wheel turns, but marketplaces cache
+    /// images, so anyone can ask them to look again.
+    event MetadataUpdate(uint256 _tokenId);
+    event BatchMetadataUpdate(uint256 _fromTokenId, uint256 _toTokenId);
 
     error AlreadyMinted();
     error SoldOut();
@@ -69,7 +73,7 @@ contract SqueekOdometer is ERC721 {
     function reading(uint256 id) public view returns (Reading memory r) {
         address owner = _requireOwned(id);
         r.startWork = startWork[id];
-        // the token's own odometer, fixed at mint: display, casing and the treat in his pouch, rolled from its id and
+        // the token's own odometer, fixed at mint: display, casing and the treat he holds, rolled from its id and
         // its starting work
         uint256 h = uint256(keccak256(abi.encode(id, r.startWork)));
         r.display = OdometerArt.displayOf(h % 100);
@@ -94,6 +98,17 @@ contract SqueekOdometer is ERC721 {
     /// @notice Metadata and art, rendered from the live reading on every call (nothing is stored but the start).
     function tokenURI(uint256 id) public view override returns (string memory) {
         return string.concat("data:application/json;base64,", Base64.encode(OdometerArt.json(id, reading(id))));
+    }
+
+    /// @notice Ask marketplaces to fetch token `id` again (free for anyone; it changes nothing but the event log).
+    function refresh(uint256 id) external {
+        _requireOwned(id);
+        emit MetadataUpdate(id);
+    }
+
+    /// @notice The same for every token.
+    function refreshAll() external {
+        if (totalMinted > 0) emit BatchMetadataUpdate(1, totalMinted);
     }
 
     /// @notice ERC-4906 too: the art changes on its own, so marketplaces should refresh it.

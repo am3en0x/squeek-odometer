@@ -9,6 +9,7 @@ import {MockCore, MockNFT, MockStaking} from "./mocks/Mocks.sol";
 
 contract ArtHarness {
     function svg(Reading memory r) external pure returns (string memory) { return string(OdometerArt.svg(1, r)); }
+    function svgId(uint256 id, Reading memory r) external pure returns (string memory) { return string(OdometerArt.svg(id, r)); }
     function json(uint256 id, Reading memory r) external pure returns (string memory) { return string(OdometerArt.json(id, r)); }
     function km(uint256 mm) external pure returns (string memory) { return string(OdometerArt.kmText(mm)); }
     function display(uint256 roll) external pure returns (uint8) { return OdometerArt.displayOf(roll); }
@@ -49,7 +50,7 @@ contract OdometerArtTest is Test {
 
     function test_svgIsAWholeDocumentWithTheDotGrid() public view {
         string memory s = art.svg(_r(2, 1, 5_310_000));
-        assertTrue(_has(s, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"'));
+        assertTrue(_has(s, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 8 32 32"'), "framed close on him");
         assertTrue(_has(s, 'fill="url(#g)"'), "the dot grid");
         bytes memory b = bytes(s);
         assertEq(string(abi.encodePacked(b[b.length - 6], b[b.length - 5], b[b.length - 4], b[b.length - 3], b[b.length - 2], b[b.length - 1])), "</svg>");
@@ -62,7 +63,7 @@ contract OdometerArtTest is Test {
         assertTrue(_has(nap, 'fill="#0b0b0d" opacity=".45"'), "night falls");
         assertTrue(_has(nap, "#f1f0ff"), "stars");
         assertTrue(_has(nap, "#b9925a"), "bedding");
-        assertFalse(_has(nap, 'values="1;0"'), "nothing spins");
+        assertFalse(_has(nap, 'values="1;0'), "nothing spins");
         assertTrue(_has(nap, '<animateTransform attributeName="transform" type="translate"'), "but his z float");
         string memory jog = art.svg(_r(2, 1, 5_000_000));
         assertFalse(_has(jog, "#0b0b0d"));
@@ -72,7 +73,8 @@ contract OdometerArtTest is Test {
     function test_theWheelAndLegsRunAtHisPace() public view {
         // pace 600: a spin of 900 - 600/3 = 700 ms, steps two thirds of it; pace 1,800: 300 ms and 200 ms
         string memory jog = art.svg(_r(2, 1, 5_000_000));
-        assertTrue(_has(jog, '<animate attributeName="opacity" values="1;0" dur="700ms" calcMode="discrete" repeatCount="indefinite"/>'));
+        assertTrue(_has(jog, '<animate attributeName="opacity" values="1;0;0" dur="700ms" calcMode="discrete" repeatCount="indefinite"/>'), "a three-frame spin");
+        assertTrue(_has(jog, 'values="0;0;1"'));
         assertTrue(_has(jog, 'dur="466ms"'));
         string memory zoom = art.svg(_r(2, 2, 5_000_000));
         assertTrue(_has(zoom, 'dur="300ms"'));
@@ -109,14 +111,24 @@ contract OdometerArtTest is Test {
         assertFalse(_has(legendNap, "#7d55c7"));
     }
 
+    function test_theRacersBibCarriesTheTokensLastDigit() public view {
+        // a 7 starts with a full top row: the bib's digit at (13, 22)
+        assertTrue(_has(art.svgId(47, _r(4, 1, 25_400_000)), '<path stroke="#d64545" d="M13 22.5h3'));
+    }
+
+    function test_confettiFalls() public view {
+        assertTrue(_has(art.svg(_r(1, 1, 1_100_000)), 'values="0 0;0 1;0 2"'));
+    }
+
     function test_confettiRightAfterANewStage() public view {
         assertTrue(_has(art.svg(_r(1, 1, 1_100_000)), "#d64545"), "100 m into Warm-up");
         assertFalse(_has(art.svg(_r(1, 1, 1_400_000)), "#d64545"), "gone after 300 m");
     }
 
     function test_pipsPastTheLastStage() public view {
-        assertFalse(_has(art.svg(_r(6, 1, 150_000_000)), "M20 0.5h1"));
-        assertTrue(_has(art.svg(_r(6, 1, 250_000_000)), '<path stroke="#ffe089" d="M20 0.5h1"/>'), "one pip at 200 km");
+        // on a steel wheel nothing else is light gold: the pips are the only #ffe089
+        assertFalse(_has(art.svg(_r(0, 1, 150_000_000)), "#ffe089"));
+        assertTrue(_has(art.svg(_r(0, 1, 250_000_000)), "#ffe089"), "one pip at 200 km");
     }
 
     // ---- the token's own odometer and the holder's bottle
@@ -127,30 +139,42 @@ contract OdometerArtTest is Test {
         r.tier = 1;
         r.holder = true;
         assertTrue(_has(art.svg(r), "#cfe8f5"));
-        assertTrue(_has(art.svg(r), "#c98a4b"), "bronze water");
+        assertTrue(_has(art.svg(r), "#a9dcf5"), "the water is water");
+        assertTrue(_has(art.svg(r), "#b9773f"), "a bronze cap");
         r.tier = 4;
-        assertTrue(_has(art.svg(r), "#7fe7ff"), "diamond water");
+        assertTrue(_has(art.svg(r), "#7fe7ff"), "a diamond cap");
     }
 
     function test_displayCasingAndPouch() public view {
         Reading memory r = _r(0, 1, 420_000);
+        assertTrue(_has(art.svg(r), 'fill="#9fb58a"'), "an LCD: dark digits on grey-green");
+        assertTrue(_has(art.svg(r), '<path stroke="#1d2b1d"'));
         r.display = 1;
         assertTrue(_has(art.svg(r), '<path stroke="#ffb000"'), "amber digits");
+        r.display = 2;
+        assertTrue(_has(art.svg(r), 'stroke-linecap="round"'), "LED digits are round dots");
+        assertTrue(_has(art.svg(r), '.5h.2'));
+        r.display = 3;
+        assertTrue(_has(art.svg(r), 'fill="url(#v)"'), "a VFD over its dot grid");
+        r.display = 4;
+        assertTrue(_has(art.svg(r), '<path stroke="#5a2810" stroke-width="3"'), "nixie digits glow");
         r.display = 5;
         string memory mech = art.svg(r);
         assertTrue(_has(mech, 'fill="#ece6d6"'), "a light mechanical counter");
         assertTrue(_has(mech, '<path stroke="#c0392b"'), "its last digit in red");
-        r.casing = 5;
-        assertTrue(_has(art.svg(r), "#d9b13b"), "gold casing");
+        assertTrue(_has(mech, '<rect x="8" y="34" width="24" height="5" fill="#8f8268"/>'), "a bezel keeps the screen off the casing");
+        r.casing = 3;
+        assertTrue(_has(art.svg(r), "#e8823a"), "signal orange casing");
         assertFalse(_has(art.svg(r), "#d6334a"));
         r.pouch = 2;
-        assertTrue(_has(art.svg(r), "#d6334a"), "a berry in his cheek");
+        assertTrue(_has(art.svg(r), "#d6334a"), "a berry in his paws");
+        assertTrue(_has(art.svg(r), "#3fa34d"), "with its leaf");
     }
 
     function test_rollsHaveTheirRarities() public view {
         assertEq(art.display(0), 0); assertEq(art.display(29), 0); assertEq(art.display(30), 1);
         assertEq(art.display(96), 4); assertEq(art.display(97), 5); assertEq(art.display(99), 5);
-        assertEq(art.casing(54), 1); assertEq(art.casing(55), 2); assertEq(art.casing(97), 5);
+        assertEq(art.casing(34), 0); assertEq(art.casing(35), 1); assertEq(art.casing(65), 2); assertEq(art.casing(90), 3);
         assertEq(art.pouch(44), 0); assertEq(art.pouch(45), 1); assertEq(art.pouch(89), 2);
         assertEq(art.pouch(97), 3); assertEq(art.pouch(98), 4); assertEq(art.pouch(99), 4);
     }
@@ -175,9 +199,9 @@ contract OdometerArtTest is Test {
         assertTrue(_has(j, '{"trait_type":"Stage","value":"Runner"}'));
         assertTrue(_has(j, '{"trait_type":"Status","value":"Zoomies"}'));
         assertTrue(_has(j, '{"trait_type":"Display","value":"Nixie"}'));
-        assertTrue(_has(j, '{"trait_type":"Casing","value":"Mint"}'));
-        assertTrue(_has(j, '{"trait_type":"Cheek Pouch","value":"Coin"}'));
-        assertTrue(_has(j, '{"trait_type":"Frame","value":"Diamond"}'));
+        assertTrue(_has(j, '{"trait_type":"Casing","value":"Charcoal"}'));
+        assertTrue(_has(j, '{"trait_type":"Treat","value":"Coin"}'));
+        assertTrue(_has(j, '{"trait_type":"Water Bottle","value":"Diamond"}'));
         assertTrue(_has(j, '{"trait_type":"Pace (turns / 30 min)","display_type":"number","value":1800}'));
         assertTrue(_has(j, '{"trait_type":"Start Work","display_type":"number","value":11048}'));
         bytes memory b = bytes(j);
@@ -192,7 +216,7 @@ contract OdometerArtTest is Test {
 
     function test_unknownReadsAsUnknown() public view {
         assertTrue(_has(art.json(1, _r(0, 3, 0)), '{"trait_type":"Status","value":"Unknown"}'));
-        assertTrue(_has(art.svg(_r(0, 3, 0)), 'fill="#0e1d12"'), "the screen still draws");
+        assertTrue(_has(art.svg(_r(0, 3, 0)), 'fill="#9fb58a"'), "the screen still draws");
     }
 
     // ---- through the contract

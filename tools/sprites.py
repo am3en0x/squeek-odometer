@@ -1,9 +1,10 @@
-"""Pixel sprites for the Squeek Odometer (v3: Squeektoshi by hand, a hand-drawn wheel, the odometer as its base).
+"""Pixel sprites for the Squeek Odometer: Squeektoshi by hand, a hand-drawn wheel, the odometer as its base.
 
-Builds every layer of the 40x40 scene and writes them to src/art/Sprites.sol as compact run data: groups of
+Builds every layer of the scene and writes them to src/art/Sprites.sol as compact run data: groups of
 [color index, run count, (x, y, length) * count], one byte each. The contract turns a group into one SVG
-<path stroke="color" d="M x y.5 h length ..."/>. Coordinates may run off the canvas by a few pixels: they are stored
-with an offset of OFF (the contract subtracts it), so the wheel can be bigger than the frame.
+<path stroke="color" d="M x y.5 h length ..."/>. Coordinates are stored with an offset of OFF (the contract
+subtracts it), so a layer may run past the edge. The scene is drawn on a 40x40 grid and shown through a 32x32 window
+(x 4..35, y 8..39), so the wheel's top crops off and Squeektoshi fills the frame.
 
 To look at the result, render the contract's own SVG: FOUNDRY_PROFILE=gallery forge script script/Gallery.s.sol
 
@@ -17,7 +18,7 @@ W = H = 40
 OFF = 8  # stored coordinate = real + OFF, so -8..247 fits a byte
 
 # ---------------------------------------------------------------- palette
-# Slots marked (token) are recolored per token or per stage by the contract; the color here is a default.
+# Slots marked (stage) or (tier) are recolored by the contract; the color here is a default.
 PALETTE = [None] + [
     "#2a1a10",  # 1 outline
     "#9a6b3f",  # 2 dark fur
@@ -45,18 +46,23 @@ PALETTE = [None] + [
     "#e8dcc8",  # 24 dust
     "#f1f0ff",  # 25 star
     "#cfe8f5",  # 26 bottle glass
-    "#e0b23a",  # 27 bottle liquid (holder tier)
-    "#9a7413",  # 28 bottle cap (holder tier)
-    "#e9dcb0",  # 29 pouch item (token)
+    "#a9dcf5",  # 27 bottle water
+    "#9a7413",  # 28 bottle cap and clip (tier)
+    "#e9dcb0",  # 29 seed light
     "#7fc4a4",  # 30 mint (confetti)
     "#fff3c4",  # 31 white gold (crown)
     "#b8c0cc",  # 32 spout metal
+    "#3fa34d",  # 33 leaf
+    "#2a2620",  # 34 seed dark
+    "#d6334a",  # 35 berry
+    "#7fe7ff",  # 36 diamond
 ]
 NAMES = ["_", "outline", "dfur", "fur", "lfur", "cream", "pink", "eye", "white", "nose", "rimd", "rim", "riml",
          "goldd", "gold", "goldl", "red", "redd", "blue", "cape", "caped", "sweat", "bed", "bedd", "dust", "star",
-         "glass", "liquid", "cap", "item", "mint", "wgold", "metal"]
+         "glass", "water", "cap", "seed", "mint", "wgold", "metal", "leaf", "seedd", "berry", "diam"]
 C = {n: i for i, n in enumerate(NAMES)}
 assert len(PALETTE) == len(NAMES)
+
 
 # ---------------------------------------------------------------- helpers
 def rows_px(x0, y0, rows, legend):
@@ -107,8 +113,8 @@ SQUEEK_RUN = [
     ".odffffffffffffleeelno",
     ".odfffffffffflllccccpo",
     "oddfffffffflllccccccoo",
-    "oddfffffllllcccccccco.",
-    ".odffllllllccccccccco.",
+    "oddfffffllllccccccccco",
+    ".odffllllllcccccccccco",
     "..oddcccccccccccccoo..",
     "...oooooooooooooooo...",
 ]
@@ -120,9 +126,9 @@ LEGS = [  # two frames under the body: stretched, then gathered
     ["..odo..........opo....", ".odo............opo..."],
     ["....odo.....opo.......", ".....oo......po........"],
 ]
-SQUEEK_NAP = [  # curled up asleep, eyes shut
-    ".....oooooo.....",
-    "...oodfffffoo...",
+SQUEEK_NAP = [  # curled up asleep, eyes shut, one ear up
+    ".....oooooo.oo..",
+    "...oodfffffoppo.",
     "..odffffffflloo.",
     ".odfffffffflllo.",
     ".odffffffflleeo.",
@@ -148,17 +154,16 @@ def rim():
 
 
 def wheel_frame(f):
-    """Spokes (a plus, then an x) and the tread rungs, shifted half a step between frames, so it spins."""
+    """Spokes and tread rungs in three frames that turn one way: the spokes step 30 degrees (their pattern repeats
+    every 90), the rungs 10 (they repeat every 30), and frame 0 is off-axis, so a still never shows a crosshair."""
     sp = set()
-    for t in range(2, R - 2):
-        if f == 0:
-            sp |= {(WCX + t, WCY), (WCX - t, WCY), (WCX, WCY + t), (WCX, WCY - t)}
-        else:
-            d = round(t * 0.7071)
-            sp |= {(WCX + d, WCY + d), (WCX - d, WCY + d), (WCX + d, WCY - d), (WCX - d, WCY - d)}
+    for k in range(4):
+        a = math.radians(22 + f * 30 + k * 90)
+        for t in range(2, R - 2):
+            sp.add((round(WCX + t * math.cos(a)), round(WCY + t * math.sin(a))))
     rg = set()
     for k in range(12):
-        a = math.radians(k * 30 + f * 15)
+        a = math.radians(k * 30 + f * 10)
         for r in (R - 2, R - 3):
             rg.add((round(WCX + r * math.cos(a)), round(WCY + r * math.sin(a))))
     return merge(paint(sp, "rimd"), paint(rg, "riml"))
@@ -169,10 +174,10 @@ def hub():
 
 
 def pips():
-    """Where the endless-ladder pips go: 12 points on the outer rim, clockwise from the top."""
+    """Where the endless-ladder pips go: 12 points on the visible part of the rim, left to right over the top."""
     out = []
     for k in range(12):
-        a = math.radians(-90 + k * 30)
+        a = math.radians(-160 + k * (140 / 11))
         out.append((round(WCX + R * math.cos(a)), round(WCY + R * math.sin(a))))
     return out
 
@@ -180,37 +185,50 @@ def pips():
 # ---------------------------------------------------------------- gear, one shape per stage
 def gear():
     g = {}
-    g["SWEAT"] = paint(at(RUN_AT, {(9, -2), (9, -1), (11, -3), (12, -4), (7, -1)}), "sweat")  # Warm-up
+    g["SWEAT"] = paint(at(RUN_AT, {(9, -2), (9, -1), (11, -3), (12, -4), (7, -1)}), "sweat")  # Warm-up, with a wristband
     band = at(RUN_AT, {(x, 3) for x in range(12, 18)})
     g["HEADBAND_0"] = merge(paint(band, "red"), paint(at(RUN_AT, {(11, 3), (10, 2), (9, 2)}), "redd"))  # Jogger
     g["HEADBAND_1"] = merge(paint(band, "red"), paint(at(RUN_AT, {(11, 3), (10, 4), (9, 4)}), "redd"))
-    g["BIB"] = merge(paint(at(RUN_AT, {(x, y) for x in range(4, 9) for y in range(4, 9)}), "white"),
-                     paint(at(RUN_AT, {(6, 5), (6, 6), (6, 7), (5, 5)}), "red"))  # Racer: number 1
-    g["MEDAL"] = merge(paint(at(RUN_AT, {(13, 7), (14, 8)}), "red"),
-                       paint(at(RUN_AT, {(14, 9), (15, 9), (14, 10), (15, 10)}), "gold"),
-                       paint(at(RUN_AT, {(14, 9)}), "goldl"))  # Marathoner
-    crown = at(RUN_AT, {(x, -1) for x in range(12, 18)} | {(12, -2), (14, -2), (16, -2)})
-    g["CROWN"] = merge(paint(crown, "wgold"), paint(at(RUN_AT, {(15, -1)}), "red"), paint(at(RUN_AT, {(17, -1)}), "gold"))
-    cape = lambda f: {(x, y) for x in range(-7 + f, 4) for y in range(1, 9 - f) if (y - 1) >= (3 - x) * (0.7 + 0.15 * f)}
-    g["CAPE_0"] = merge(paint(at(RUN_AT, cape(0)), "cape"), paint(at(RUN_AT, {(x, 8) for x in range(-1, 4)}), "caped"))
-    g["CAPE_1"] = merge(paint(at(RUN_AT, cape(1)), "cape"), paint(at(RUN_AT, {(x, 7) for x in range(0, 4)}), "caped"))
-    # asleep: the headband and the crown stay on, on the ball's head
-    g["HEADBAND_NAP"] = paint(at(NAP_AT, {(x, 2) for x in range(9, 13)} | {(8, 2)}), "red")
-    g["CROWN_NAP"] = merge(paint(at(NAP_AT, {(x, -1) for x in range(7, 12)} | {(7, -2), (9, -2), (11, -2)}), "wgold"),
-                           paint(at(NAP_AT, {(9, -1)}), "red"))
+    # Racer: a race bib; the contract writes the token's last digit on it
+    g["BIB"] = merge(paint(at(RUN_AT, {(x, y) for x in range(3, 8) for y in range(2, 9)}), "white"),
+                     paint(at(RUN_AT, {(3, 2), (7, 2)}), "redd"))
+    g["MEDAL"] = merge(paint(at(RUN_AT, {(12, 7), (13, 8)}), "red"),
+                       paint(at(RUN_AT, {(13, 9), (14, 9), (13, 10), (14, 10)}), "gold"),
+                       paint(at(RUN_AT, {(13, 9)}), "goldl"))  # Marathoner
+    crown = at(RUN_AT, {(x, 0) for x in range(12, 18)} | {(12, -1), (14, -1), (16, -1)})
+    g["CROWN"] = merge(paint(crown, "wgold"), paint(at(RUN_AT, {(15, 0)}), "red"))
+
+    def cape(f):
+        # hangs from a gold clasp at the neck, over the shoulders and back, with a scalloped hem that flutters
+        body = {(x, y) for x in range(-5 + f, 12) for y in range(1, 9)
+                if y >= 1 + (11 - x) * 0.22 and y <= 2.5 + (x + 6 - f) * 0.55}
+        hem = {(x, 8 if (x + f) % 2 else 7) for x in range(-4 + f, 6)}
+        return merge(paint(at(RUN_AT, body | hem), "cape"),
+                     paint(at(RUN_AT, {(x, 7) for x in range(-4 + f, 6) if (x + f) % 2}), "caped"),
+                     paint(at(RUN_AT, {(12, 5)}), "gold"))
+    g["CAPE_0"] = cape(0)
+    g["CAPE_1"] = cape(1)
+    # asleep, the headband and the crown stay on, on the ball's head
+    g["HEADBAND_NAP"] = paint(at(NAP_AT, {(x, 2) for x in range(8, 12)} | {(7, 2)}), "red")
+    g["CROWN_NAP"] = merge(paint(at(NAP_AT, {(x, -1) for x in range(5, 10)} | {(5, -2), (7, -2), (9, -2)}), "wgold"),
+                           paint(at(NAP_AT, {(7, -1)}), "red"))
     return g
+
+
+def feet(frame):
+    row = LEGS[frame][1]
+    return [i for i, ch in enumerate(row) if ch != "."]
 
 
 def shoes(frame):
     """Runner's shoes: the feet in blue with a white toe."""
     out = {}
-    row = LEGS[frame][1]
-    feet = [i for i, ch in enumerate(row) if ch != "."]
-    for i in feet:
-        out[(RUN_AT[0] + i, RUN_AT[1] + len(SQUEEK_RUN) + 1)] = C["blue"]
-    # the front-most pixel of each foot gets a white toe cap
+    fs = feet(frame)
+    y = RUN_AT[1] + len(SQUEEK_RUN) + 1
+    for i in fs:
+        out[(RUN_AT[0] + i, y)] = C["blue"]
     groups, cur = [], []
-    for i in feet:
+    for i in fs:
         if cur and i != cur[-1] + 1:
             groups.append(cur)
             cur = []
@@ -218,12 +236,37 @@ def shoes(frame):
     if cur:
         groups.append(cur)
     for gpx in groups:
-        out[(RUN_AT[0] + gpx[-1], RUN_AT[1] + len(SQUEEK_RUN) + 1)] = C["white"]
+        out[(RUN_AT[0] + gpx[-1], y)] = C["white"]
     return out
 
 
+def wristband(frame):
+    """Warm-up: a sweatband on the front leg, frame by frame."""
+    row = LEGS[frame][0]
+    front = [i for i, ch in enumerate(row) if ch != "."][-3:]
+    return paint({(RUN_AT[0] + i, RUN_AT[1] + len(SQUEEK_RUN)) for i in front}, "sweat")
+
+
+def treat(kind, pose):
+    """A treat held at his mouth, outlined, with a highlight: a striped seed, a berry with a leaf, a coin with a rim,
+    a diamond with a facet."""
+    ox, oy = (RUN_AT[0] + 21, RUN_AT[1] + 6) if pose == "run" else (NAP_AT[0] + 15, NAP_AT[1] + 4)
+    p = lambda pts: {(ox + x, oy + y) for (x, y) in pts}
+    if kind == "SEED":
+        return merge(paint(p({(0, 0), (1, 0), (0, 1), (1, 1), (0, 2), (1, 2)}), "seed"),
+                     paint(p({(1, 0), (0, 1), (1, 2)}), "seedd"))
+    if kind == "BERRY":
+        return merge(paint(p({(0, 1), (1, 1), (0, 2), (1, 2)}), "berry"), paint(p({(1, 0)}), "leaf"),
+                     paint(p({(0, 1)}), "white"))
+    if kind == "COIN":
+        return merge(paint(p({(0, 0), (1, 0), (2, 0), (0, 1), (2, 1), (0, 2), (1, 2), (2, 2)}), "goldd"),
+                     paint(p({(1, 1)}), "goldl"))
+    return merge(paint(p({(0, 1), (1, 0), (1, 1), (2, 1), (1, 2)}), "diam"), paint(p({(1, 0)}), "white"))
+
+
 def dust(frame):
-    pts = {(6, 31), (5, 32), (7, 32), (4, 31)} if frame == 0 else {(4, 32), (3, 31), (5, 30), (2, 32)}
+    """Dust kicked up at his heels, inside the rim."""
+    pts = {(10, 30), (9, 31), (10, 31), (8, 30)} if frame == 0 else {(9, 29), (8, 30), (9, 30), (7, 29)}
     return paint(pts, "dust")
 
 
@@ -234,40 +277,37 @@ def bedding():
 
 
 def zzz():
-    return merge(rows_px(27, 16, ["zzzz", "...z", "..z.", ".z..", "zzzz"], {"z": "star"}),
-                 rows_px(32, 11, ["zzz", "..z", ".z.", "zzz"], {"z": "star"}))
+    return merge(rows_px(28, 18, ["zz.", ".z.", ".zz"], {"z": "star"}),
+                 rows_px(31, 14, ["zz.", ".z.", ".zz"], {"z": "star"}))
 
 
 def moon():
-    pts = {(x, y) for x in range(34, 39) for y in range(1, 6) if (x - 36) ** 2 + (y - 3) ** 2 <= 5}
-    bite = {(x, y) for x in range(34, 40) for y in range(0, 6) if (x - 37.4) ** 2 + (y - 2.2) ** 2 <= 4}
+    pts = {(x, y) for x in range(29, 34) for y in range(9, 14) if (x - 31) ** 2 + (y - 11) ** 2 <= 5}
+    bite = {(x, y) for x in range(29, 35) for y in range(8, 14) if (x - 32.4) ** 2 + (y - 10.2) ** 2 <= 4}
     return paint(pts - bite, "goldl")
 
 
 def stars():
-    return paint({(1, 2), (37, 10), (2, 24), (38, 26), (30, 0), (8, 1), (1, 13)}, "star")
+    return paint({(6, 10), (25, 9), (34, 17), (5, 22), (35, 27), (13, 11)}, "star")
 
 
 def bottle():
-    """The holder's water bottle, clipped to the cage on the left: glass, liquid by tier, cap, metal spout."""
-    glass = {(x, y) for x in range(1, 5) for y in range(5, 16)}
-    edge = {(x, y) for (x, y) in glass if x in (1, 4) or y in (5, 15)}
-    liquid = {(x, y) for x in range(2, 4) for y in range(9, 15)}
-    return merge(paint(glass, "glass"), paint(edge, "outline"), paint(liquid, "liquid"),
-                 paint({(x, y) for x in range(1, 5) for y in (3, 4)}, "cap"),
-                 paint({(5, 16), (6, 17)}, "metal"), paint({(2, 6)}, "white"))
-
-
-def pouch(pose):
-    """A treat in the cheek pouch (token trait), seen at the mouth."""
-    if pose == "run":
-        return paint(at(RUN_AT, {(18, 7), (19, 7), (18, 8), (19, 8)}), "item")
-    return paint(at(NAP_AT, {(12, 6), (13, 6), (12, 7)}), "item")
+    """The holder's water bottle, clipped to the cage by a wire: rounded glass, water, the cap and clip in the tier's
+    metal, a spout."""
+    glass = {(x, y) for x in range(5, 9) for y in range(11, 21)}
+    edge = {(x, y) for (x, y) in glass if x in (5, 8) or y == 11} | {(6, 21), (7, 21)}
+    water = {(x, y) for x in range(6, 8) for y in range(14, 21)}
+    return merge(paint(glass, "glass"), paint(edge, "outline"), paint(water, "water"),
+                 paint({(x, y) for x in range(5, 9) for y in (9, 10)} | {(9, 9), (10, 9)}, "cap"),
+                 paint({(7, 22), (8, 23)}, "metal"), paint({(6, 12)}, "white"))
 
 
 def confetti():
-    return merge(paint({(12, 4), (22, 9), (31, 7)}, "red"), paint({(26, 5), (17, 2), (9, 9)}, "gold"),
-                 paint({(8, 6), (28, 11), (15, 7)}, "blue"), paint({(30, 3), (14, 11), (24, 2)}, "mint"))
+    """2-pixel pieces; the contract lets them fall."""
+    return merge(paint({(12, 10), (12, 11), (27, 12), (28, 12)}, "red"),
+                 paint({(18, 9), (19, 9), (9, 15), (9, 16)}, "gold"),
+                 paint({(23, 14), (23, 15), (31, 18), (32, 18)}, "blue"),
+                 paint({(15, 14), (16, 14), (26, 9), (26, 10)}, "mint"))
 
 
 # 3x5 font: digits, dot, question mark
@@ -285,20 +325,22 @@ LAYERS = {}
 
 def build():
     LAYERS["RIM"] = rim()
-    LAYERS["WHEEL_0"] = wheel_frame(0)
-    LAYERS["WHEEL_1"] = wheel_frame(1)
+    for f in (0, 1, 2):
+        LAYERS[f"WHEEL_{f}"] = wheel_frame(f)
     LAYERS["HUB"] = hub()
     LAYERS["SQUEEK_RUN"] = rows_px(*RUN_AT, SQUEEK_RUN, COAT)
     LAYERS["SQUEEK_ZOOM"] = rows_px(*RUN_AT, EARS_BACK + SQUEEK_RUN[2:], COAT)
     for f in (0, 1):
         LAYERS[f"LEGS_{f}"] = rows_px(RUN_AT[0], RUN_AT[1] + len(SQUEEK_RUN), LEGS[f], COAT)
         LAYERS[f"SHOES_{f}"] = shoes(f)
+        LAYERS[f"WRIST_{f}"] = wristband(f)
         LAYERS[f"DUST_{f}"] = dust(f)
     LAYERS["SQUEEK_NAP"] = rows_px(*NAP_AT, SQUEEK_NAP, COAT)
     LAYERS["BEDDING"] = bedding()
     LAYERS.update(gear())
-    LAYERS["POUCH_RUN"] = pouch("run")
-    LAYERS["POUCH_NAP"] = pouch("nap")
+    for kind in ("SEED", "BERRY", "COIN", "DIAMOND"):
+        LAYERS[f"{kind}_RUN"] = treat(kind, "run")
+        LAYERS[f"{kind}_NAP"] = treat(kind, "nap")
     LAYERS["ZZZ"] = zzz()
     LAYERS["MOON"] = moon()
     LAYERS["STARS"] = stars()
@@ -358,8 +400,8 @@ def write_solidity():
         "// GENERATED by tools/sprites.py. Do not edit by hand: change the generator and run it again.",
         "pragma solidity 0.8.26;",
         "",
-        "/// @notice Pixel layers of the 40x40 scene: groups of [color, runs, (x, y, length) * runs], one byte each, with x",
-        f"/// and y stored + OFF ({OFF}) so a layer may run off the canvas.",
+        "/// @notice Pixel layers of the scene: groups of [color, runs, (x, y, length) * runs], one byte each, with x and y",
+        f"/// stored + OFF ({OFF}) so a layer may run past the edge.",
         "library Sprites {",
         f"    uint256 internal constant OFF = {OFF};",
         "    /// @notice 7-character hex colors, index 0 unused. Some slots are recolored per token by OdometerArt.",
@@ -368,7 +410,7 @@ def write_solidity():
     for name, px in LAYERS.items():
         lines.append(f"    bytes internal constant {name} = hex\"{encode(px).hex()}\";")
     pip_bytes = b"".join(bytes([x + OFF, y + OFF]) for (x, y) in pips())
-    lines.append(f"    /// @notice The 12 rim points for the endless-ladder pips, clockwise from the top: (x, y) + OFF.")
+    lines.append("    /// @notice The 12 rim points for the endless-ladder pips, over the top from left to right: (x, y) + OFF.")
     lines.append(f"    bytes internal constant PIPS = hex\"{pip_bytes.hex()}\";")
     lines.append("")
     lines.append("    /// @notice A glyph of the odometer font: [width, runs, (dx, dy, length) * runs].")
@@ -384,8 +426,8 @@ def write_solidity():
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")
     total = sum(len(encode(px)) for px in LAYERS.values())
-    print(f"wrote {path}: {len(LAYERS)} layers, {total} bytes of run data; palette slots: " +
-          ", ".join(f"{n}={i}" for n, i in C.items() if n in ("rimd", "rim", "riml", "liquid", "cap", "item")))
+    print(f"wrote {path}: {len(LAYERS)} layers, {total} bytes of run data; recolored slots: " +
+          ", ".join(f"{n}={i}" for n, i in C.items() if n in ("rimd", "rim", "riml", "cap")))
 
 
 if __name__ == "__main__":

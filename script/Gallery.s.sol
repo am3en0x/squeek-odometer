@@ -27,14 +27,14 @@ contract Gallery is Script {
                 r.distanceMm = mm[stage];
                 r.live = r.status != 3;
                 r.display = (stage + k) % 6;
-                r.casing = (stage * 2 + k) % 6;
+                r.casing = (stage * 2 + k) % 4;
                 r.pouch = (stage + k) % 5;
                 r.tier = (stage + k) % 5;
                 r.holder = r.tier > 0;
                 r.pace = r.status == 2 ? 1_800 : r.status == 1 ? 600 : 0;
                 html = string.concat(html, '<figure style="display:inline-block;margin:0 14px 10px 0;text-align:center">',
                     string(OdometerArt.svg(uint256(stage) * 4 + k + 1, r)), '<figcaption style="color:#9aa3b5;font:12px ui-monospace,monospace">',
-                    statuses[k], " &middot; ", OdometerArt.displayName(r.display), " &middot; ", OdometerArt.casingName(r.casing), " &middot; ", OdometerArt.pouchName(r.pouch), " &middot; frame ", OdometerArt.frameName(r.tier), "</figcaption></figure>");
+                    statuses[k], " &middot; ", OdometerArt.displayName(r.display), " &middot; ", OdometerArt.casingName(r.casing), " &middot; ", OdometerArt.pouchName(r.pouch), " &middot; bottle ", OdometerArt.frameName(r.tier), "</figcaption></figure>");
             }
             html = string.concat(html, "</div>");
         }
