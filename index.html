@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Squeek Odometer</title>
   <meta name="description" content="A free, fully on-chain odometer for Squeektoshi, the hamster whose wheel powers Squeekchain. Mint on Sepolia and watch it count his kilometres.">
-  <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#c9cad2">
+  <meta name="theme-color" content="#000000">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/barlow-condensed-700.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/ibm-plex-mono-400.woff2" as="font" type="font/woff2" crossorigin>
@@ -18,140 +17,123 @@
   <header class="bar">
     <a class="brand" href="#top" aria-label="Squeek Odometer, top of the page">
       <img src="favicon.svg" alt="" width="32" height="32">
-      <span>Squeek <b>Odometer</b></span>
+      <span>Squeek Odometer</span>
     </a>
     <nav class="nav" aria-label="Sections">
-      <a href="#how">How it works</a>
+      <a href="#how">How it counts</a>
       <a href="#traits">Traits</a>
       <a href="#latest">Latest</a>
       <a href="#contract">Contract</a>
       <a href="#faq">FAQ</a>
     </nav>
-    <button id="connect" class="btn line" type="button"><span class="sq" aria-hidden="true"></span><span id="connect-label">Connect<span class="wide"> wallet</span></span></button>
+    <button id="connect" class="btn line" type="button"><span class="led" aria-hidden="true"></span><span id="connect-label">Connect<span class="wide"> wallet</span></span></button>
   </header>
 
   <main id="main">
-    <section class="panel hero" id="top" aria-labelledby="hero-h">
+    <section class="hero" id="top" aria-labelledby="hero-h">
       <div class="hero-text">
-        <p class="label">Genesis Code Lane &middot; Sepolia testnet</p>
-        <h1 id="hero-h">How far has Squeektoshi run <span class="accent">since you showed up?</span></h1>
-        <p class="lead">Each odometer stores the wheel's settled work at the moment you mint, then counts every turn after it,
-          live from SqueekCore. It spins at his real pace, sleeps when he sleeps and earns him gear at 1, 5, 10, 25, 50
-          and 100 km.</p>
+        <h1 id="hero-h">How far has Squeektoshi run since you showed&nbsp;up?</h1>
+        <p class="lead">Your odometer stores the wheel's settled work at the block you mint, then counts every turn after it,
+          live from SqueekCore on Sepolia. It spins at his real pace, sleeps when he sleeps and earns him gear at 1, 5, 10,
+          25, 50 and 100 km.</p>
         <div class="actions">
           <button id="mint" class="btn solid" type="button" disabled>Mint free on Sepolia</button>
-          <a class="btn text" href="#how">How it works</a>
+          <p class="fine supply"><span id="supply" class="num">0 / 9,999</span> minted<br>free, one per wallet</p>
         </div>
-        <p class="fine"><span id="supply" class="num">&ndash; / 9,999</span> minted &middot; free &middot; one per wallet</p>
         <p id="msg" class="msg" role="status" aria-live="polite"></p>
+        <figure class="mine">
+          <img id="mine" alt="A fresh odometer at 0.00 km, the one you get when you mint" src="placeholder.svg" width="480" height="480">
+          <figcaption>
+            <span id="mine-caption">Yours starts at 0.00 km and shows up here after you mint.</span>
+            <button id="refresh" class="btn line small" type="button" hidden>Ask marketplaces to redraw</button>
+          </figcaption>
+        </figure>
       </div>
-      <figure class="mine">
-        <div class="mine-frame"><img id="mine" alt="Your odometer, once you mint one" src="placeholder.svg" width="480" height="480"></div>
-        <figcaption>
-          <span class="label">Your odometer</span>
-          <span id="mine-caption">Shows up here after you mint.</span>
-          <button id="refresh" class="btn line small" type="button" hidden>Ask marketplaces to redraw</button>
-        </figcaption>
-      </figure>
+      <div class="board">
+        <h2 class="sr">The wheel right now</h2>
+        <canvas id="led" role="img" aria-label="LED board: Squeektoshi is loading."></canvas>
+        <p class="board-note"><span id="live-line">Reading the wheel&hellip;</span>
+          From <a href="https://docs.squeekchain.com/developers/api/" target="_blank" rel="noopener">Squeekchain's public API</a>;
+          odometers count settled work, so they move a few minutes after the wheel does.
+          <a href="https://x.com/squeekchain" target="_blank" rel="noopener">Watch the stream</a></p>
+      </div>
     </section>
 
-    <div class="live-row">
-      <section class="board" aria-labelledby="board-h">
-        <h2 id="board-h" class="sr">The wheel right now</h2>
-        <canvas id="led" role="img" aria-label="Squeektoshi's wheel, loading"></canvas>
-      </section>
-      <section class="panel side" aria-labelledby="live-h">
-        <h2 id="live-h" class="label">The wheel right now</h2>
-        <dl class="kv">
-          <div><dt>Squeektoshi</dt><dd id="live-state">&hellip;</dd></div>
-          <div><dt>Wheel speed</dt><dd id="live-rpm" class="num">&hellip;</dd></div>
-          <div><dt>Wheel turns</dt><dd id="live-work" class="num">&hellip;</dd></div>
-          <div><dt>Distance</dt><dd id="live-km" class="num">&hellip;</dd></div>
-          <div><dt>Squeek block</dt><dd id="live-height" class="num">&hellip;</dd></div>
-        </dl>
-        <p class="fine">From <a href="https://docs.squeekchain.com/developers/api/" target="_blank" rel="noopener">Squeekchain's public API</a>.
-          Odometers count settled work only, so they move a few minutes after the wheel does.</p>
-        <a class="btn line small" href="https://x.com/squeekchain" target="_blank" rel="noopener">Watch the stream</a>
-      </section>
-    </div>
-
-    <section class="panel" id="how" aria-labelledby="how-h">
-      <p class="label">How it works</p>
-      <h2 id="how-h">One wheel, 9,999 odometers</h2>
-      <ol class="steps">
-        <li><span class="n">01</span><h3>Mint</h3><p>Free, one per wallet. Your token stores SqueekCore's settled work at that block: that is its zero.</p></li>
-        <li><span class="n">02</span><h3>He runs</h3><p>Every wheel turn after your mint adds 887 mm. Nothing is stored per turn: the token reads SqueekCore each time it is drawn.</p></li>
-        <li><span class="n">03</span><h3>It grows</h3><p>Seven stages from Newbie to Legend. Each one adds gear and a new sky, and the wheel goes steel, bronze, silver, gold.</p></li>
-        <li><span class="n">04</span><h3>It naps</h3><p>No turns in the last three settled rounds (30 min) and night falls on your token. 1,500 or more and he has the zoomies.</p></li>
-      </ol>
+    <section class="block" id="how" aria-labelledby="how-h">
+      <h2 id="how-h">How it counts</h2>
+      <dl class="plate">
+        <div><dt>Zero point</dt><dd>SqueekCore's settled work at your mint block. Stored once, never changed.</dd></div>
+        <div><dt>One turn</dt><dd>887 mm. One accepted magnet passage on the wheel is one turn.</dd></div>
+        <div><dt>Status</dt><dd>The last three settled rounds, 30 minutes: no turns is napping and night falls on your token, under 1,500 is jogging, more is zoomies.</dd></div>
+        <div><dt>Pace</dt><dd>The wheel in your art turns as fast as he does: 900 ms a turn at a crawl, down to 240 ms flat out.</dd></div>
+        <div><dt>Drawn</dt><dd>Inside <code>tokenURI</code>, every time a wallet or marketplace loads it. Nothing runs in between.</dd></div>
+        <div><dt>Lag</dt><dd>A few minutes. Only settled work counts, and rounds settle every ten minutes.</dd></div>
+      </dl>
     </section>
 
-    <section class="panel" id="traits" aria-labelledby="traits-h">
-      <p class="label">Traits</p>
-      <h2 id="traits-h">Every stage, drawn by the contract</h2>
-      <div class="strip" tabindex="0" aria-label="The seven stages, scrollable">
-        <figure><img src="samples/stage-0.svg" alt="Newbie odometer" width="480" height="480" loading="lazy"><figcaption><b>Newbie</b><span>0 km</span></figcaption></figure>
-        <figure><img src="samples/stage-1.svg" alt="Warm-up odometer with a wristband" width="480" height="480" loading="lazy"><figcaption><b>Warm-up</b><span>1 km</span></figcaption></figure>
-        <figure><img src="samples/stage-2.svg" alt="Jogger odometer with a headband" width="480" height="480" loading="lazy"><figcaption><b>Jogger</b><span>5 km</span></figcaption></figure>
-        <figure><img src="samples/stage-3.svg" alt="Runner odometer with shoes" width="480" height="480" loading="lazy"><figcaption><b>Runner</b><span>10 km</span></figcaption></figure>
-        <figure><img src="samples/stage-4.svg" alt="Racer odometer with a race bib" width="480" height="480" loading="lazy"><figcaption><b>Racer</b><span>25 km</span></figcaption></figure>
-        <figure><img src="samples/stage-5.svg" alt="Marathoner odometer with a medal" width="480" height="480" loading="lazy"><figcaption><b>Marathoner</b><span>50 km</span></figcaption></figure>
-        <figure><img src="samples/stage-6.svg" alt="Legend odometer with a cape and crown" width="480" height="480" loading="lazy"><figcaption><b>Legend</b><span>100 km</span></figcaption></figure>
+    <section class="block" id="traits" aria-labelledby="traits-h">
+      <h2 id="traits-h">Newbie to Legend</h2>
+      <div class="ruler" tabindex="0" aria-label="The seven stages along the distance, scrollable">
+        <figure><img src="samples/stage-0.svg" alt="Newbie odometer" width="480" height="480" loading="lazy"><figcaption><b>0 km</b>Newbie</figcaption></figure>
+        <figure><img src="samples/stage-1.svg" alt="Warm-up odometer with a wristband" width="480" height="480" loading="lazy"><figcaption><b>1 km</b>Warm-up</figcaption></figure>
+        <figure><img src="samples/stage-2.svg" alt="Jogger odometer with a headband" width="480" height="480" loading="lazy"><figcaption><b>5 km</b>Jogger</figcaption></figure>
+        <figure><img src="samples/stage-3.svg" alt="Runner odometer with shoes" width="480" height="480" loading="lazy"><figcaption><b>10 km</b>Runner</figcaption></figure>
+        <figure><img src="samples/stage-4.svg" alt="Racer odometer with a race bib" width="480" height="480" loading="lazy"><figcaption><b>25 km</b>Racer</figcaption></figure>
+        <figure><img src="samples/stage-5.svg" alt="Marathoner odometer with a medal" width="480" height="480" loading="lazy"><figcaption><b>50 km</b>Marathoner</figcaption></figure>
+        <figure><img src="samples/stage-6.svg" alt="Legend odometer with a cape and crown" width="480" height="480" loading="lazy"><figcaption><b>100 km</b>Legend</figcaption></figure>
       </div>
-      <div class="tables">
-        <div class="t">
-          <h3>Display <small>rolled at mint</small></h3>
-          <table>
-            <tr><td>Green LCD</td><td class="num">30%</td></tr>
-            <tr><td>Amber</td><td class="num">25%</td></tr>
-            <tr><td>Red LED</td><td class="num">18%</td></tr>
-            <tr><td>Ice VFD</td><td class="num">15%</td></tr>
-            <tr><td>Nixie</td><td class="num">9%</td></tr>
-            <tr><td>Mechanical</td><td class="num">3%</td></tr>
-          </table>
+      <p class="fine">Each stage adds gear and a new sky, and the wheel goes steel, bronze, silver, gold. Confetti for the first
+        300 m of a new stage; past 100 km a pip lights on the rim for every 100 km more.</p>
+
+      <div class="rolls">
+        <div class="roll">
+          <h3>Display</h3>
+          <ul>
+            <li><span class="chip lcd">0.42</span>Green LCD<i>30%</i></li>
+            <li><span class="chip amber">0.42</span>Amber<i>25%</i></li>
+            <li><span class="chip red">0.42</span>Red LED<i>18%</i></li>
+            <li><span class="chip ice">0.42</span>Ice VFD<i>15%</i></li>
+            <li><span class="chip nixie">0.42</span>Nixie<i>9%</i></li>
+            <li><span class="chip mech">0.4<em>2</em></span>Mechanical<i>3%</i></li>
+          </ul>
         </div>
-        <div class="t">
-          <h3>Casing <small>rolled at mint</small></h3>
-          <table>
-            <tr><td>Cream</td><td class="num">35%</td></tr>
-            <tr><td>Silver</td><td class="num">30%</td></tr>
-            <tr><td>Charcoal</td><td class="num">25%</td></tr>
-            <tr><td>Signal Orange</td><td class="num">10%</td></tr>
-          </table>
+        <div class="roll">
+          <h3>Casing</h3>
+          <ul>
+            <li><span class="dot" style="--c:#e2d6bc"></span>Cream<i>35%</i></li>
+            <li><span class="dot" style="--c:#d9dee6"></span>Silver<i>30%</i></li>
+            <li><span class="dot" style="--c:#2a2d33"></span>Charcoal<i>25%</i></li>
+            <li><span class="dot" style="--c:#e8823a"></span>Signal Orange<i>10%</i></li>
+          </ul>
+          <h3 class="next">Treat in his paws</h3>
+          <ul>
+            <li>None<i>45%</i></li>
+            <li>Sunflower seed<i>30%</i></li>
+            <li>Berry<i>15%</i></li>
+            <li>Coin<i>8%</i></li>
+            <li>Diamond<i>2%</i></li>
+          </ul>
         </div>
-        <div class="t">
-          <h3>Treat <small>rolled at mint</small></h3>
-          <table>
-            <tr><td>None</td><td class="num">45%</td></tr>
-            <tr><td>Sunflower seed</td><td class="num">30%</td></tr>
-            <tr><td>Berry</td><td class="num">15%</td></tr>
-            <tr><td>Coin</td><td class="num">8%</td></tr>
-            <tr><td>Diamond</td><td class="num">2%</td></tr>
-          </table>
-        </div>
-        <div class="t">
-          <h3>Water bottle <small>live, power in staking</small></h3>
-          <table>
-            <tr><td>Bronze</td><td>Squeek in wallet</td></tr>
-            <tr><td>Silver</td><td>Level 3 power</td></tr>
-            <tr><td>Gold</td><td>Level 5 power</td></tr>
-            <tr><td>Diamond</td><td>Level 7 power</td></tr>
-          </table>
+        <div class="roll">
+          <h3>Water bottle</h3>
+          <p class="fine">For whoever holds the odometer now, if they hold a Squeek. Checked live on every read.</p>
+          <ul>
+            <li><span class="dot" style="--c:#b9773f"></span>Bronze<i>Squeek in wallet</i></li>
+            <li><span class="dot" style="--c:#c4ccd8"></span>Silver<i>Level 3 power staked</i></li>
+            <li><span class="dot" style="--c:#e0b23a"></span>Gold<i>Level 5 power staked</i></li>
+            <li><span class="dot" style="--c:#7fe7ff"></span>Diamond<i>Level 7 power staked</i></li>
+          </ul>
         </div>
       </div>
-      <p class="fine">Status and pace are live too: napping, jogging or zoomies, with the wheel turning faster as he does.
-        Confetti for the first 300 m of a new stage; past 100 km a pip lights on the rim for every 100 km more.</p>
     </section>
 
-    <section class="panel" id="latest" aria-labelledby="latest-h">
-      <p class="label">Latest</p>
+    <section class="block" id="latest" aria-labelledby="latest-h">
       <h2 id="latest-h">Latest odometers</h2>
       <div id="recent" class="grid"><p class="fine">Loading&hellip;</p></div>
     </section>
 
-    <section class="panel" id="contract" aria-labelledby="contract-h">
-      <p class="label">Contract</p>
-      <h2 id="contract-h">Ownerless and on chain</h2>
+    <section class="block" id="contract" aria-labelledby="contract-h">
+      <h2 id="contract-h">One contract, no owner</h2>
       <div class="two">
         <dl class="kv addrs">
           <div><dt>Squeek Odometer</dt><dd><a id="contract-link" class="mono" href="#contract" target="_blank" rel="noopener">not deployed yet</a></dd></div>
@@ -169,8 +151,7 @@
       </div>
     </section>
 
-    <section class="panel" id="faq" aria-labelledby="faq-h">
-      <p class="label">FAQ</p>
+    <section class="block" id="faq" aria-labelledby="faq-h">
       <h2 id="faq-h">Questions</h2>
       <details><summary>Does it cost anything?</summary><p>The mint is free. You pay Sepolia gas only, which is test ETH from a faucet.</p></details>
       <details><summary>Why is my odometer behind the stream?</summary><p>It counts settled work. SqueekCore settles the wheel in rounds of ten minutes, so the number moves a few minutes after Squeektoshi does.</p></details>
@@ -182,26 +163,13 @@
   </main>
 
   <footer class="foot">
-    <div class="foot-brand">
-      <img src="favicon.svg" alt="" width="40" height="40">
-      <p>A free, fully on-chain odometer for the hamster whose wheel powers Squeekchain. No hamsters were rushed.</p>
-    </div>
-    <div>
-      <p class="label">Odometer</p>
-      <ul>
-        <li><a href="#how">How it works</a></li>
-        <li><a href="#traits">Traits</a></li>
-        <li><a id="repo-link-2" href="https://github.com/am3en0x/squeek-odometer" target="_blank" rel="noopener">Source</a></li>
-      </ul>
-    </div>
-    <div>
-      <p class="label">Squeekchain</p>
-      <ul>
-        <li><a href="https://squeekchain.com" target="_blank" rel="noopener">squeekchain.com</a></li>
-        <li><a href="https://squeekchain.com/genesis/code" target="_blank" rel="noopener">Genesis Code Lane</a></li>
-        <li><a href="https://docs.squeekchain.com" target="_blank" rel="noopener">Docs</a></li>
-      </ul>
-    </div>
+    <a class="brand" href="#top"><img src="favicon.svg" alt="" width="28" height="28"><span>Squeek Odometer</span></a>
+    <p>A community build for the <a href="https://squeekchain.com/genesis/code" target="_blank" rel="noopener">Genesis Code Lane</a>.
+      Not affiliated with <a href="https://squeekchain.com" target="_blank" rel="noopener">Squeekchain</a>. Testnet only. No hamsters were rushed.</p>
+    <nav aria-label="Links">
+      <a id="repo-link-2" href="https://github.com/am3en0x/squeek-odometer" target="_blank" rel="noopener">Source</a>
+      <a href="https://docs.squeekchain.com" target="_blank" rel="noopener">Squeekchain docs</a>
+    </nav>
   </footer>
 
   <script src="config.js"></script>
