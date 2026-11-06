@@ -1,0 +1,14 @@
+{
+  "kind": "evm_contracts",
+  "contracts": [
+    {
+      "contract": "SqueekOdometer",
+      "constructorArgs": [
+        "0xFD6C166D4B8E2962E65746a13e5a0797CD4dE0c4",
+        "0xC4C7982657f00509548F3a3a41db7FA439a6856B",
+        "0x50fd1780526C3186A0c037c7622203bC4fb611ca"
+      ]
+    }
+  ],
+  "notes": "SqueekOdometer is the single contract of Squeek Odometer, a free on-chain dynamic NFT on Sepolia (chain id 11155111). Its constructor takes the Squeekchain release core-sepolia-20261103 addresses: SqueekCore proxy, SqueekNFT (Squeeks) and SqueekStaking proxy, in that order; they are immutable. The constructor reverts outside Sepolia (and local chain 31337) and makes no external calls, so a rehearsal on an empty chain succeeds. There is no owner, admin, pause, upgrade, withdrawal or payable function, and no initialization call; deployment value is zero. mint() is free, one per wallet, 9,999 in total."
+}

@@ -138,7 +138,31 @@ async function mint() {
   }
 }
 
-function init() {
+// An IMD-hosted build ships dist/imd-deployment.json with the live addresses: use it when config.js has none.
+async function fromImdDeployment() {
+  try {
+    const j = await (await fetch('imd-deployment.json')).json()
+    let found = null
+    const walk = (o, name) => {
+      if (found || !o || typeof o !== 'object') return
+      const label = String(o.contract ?? o.name ?? name ?? '')
+      const addr = o.address ?? o.contractAddress ?? (typeof o === 'object' && /^0x[0-9a-fA-F]{40}$/.test(o[name]) ? o[name] : null)
+      if (/SqueekOdometer/.test(label) && /^0x[0-9a-fA-F]{40}$/.test(addr ?? '')) {
+        found = { address: addr, block: Number(o.blockNumber ?? o.block ?? 0) }
+        return
+      }
+      for (const [k, v] of Object.entries(o)) {
+        if (typeof v === 'string' && /SqueekOdometer/.test(k) && /^0x[0-9a-fA-F]{40}$/.test(v)) { found = { address: v, block: 0 }; return }
+        walk(v, k)
+      }
+    }
+    walk(j)
+    if (found) { CFG.address = found.address; if (found.block) CFG.fromBlock = found.block }
+  } catch {}
+}
+
+async function init() {
+  if (!CFG.address) await fromImdDeployment()
   $('connect').onclick = connect
   $('mint').onclick = mint
   if (CFG.address) {
