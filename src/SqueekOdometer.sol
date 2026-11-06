@@ -69,6 +69,8 @@ contract SqueekOdometer is ERC721 {
     function reading(uint256 id) public view returns (Reading memory r) {
         address owner = _requireOwned(id);
         r.startWork = startWork[id];
+        // the hamster's fur is the token's own, fixed at mint: rolled from its id and its starting work
+        r.fur = OdometerArt.furOf(uint256(keccak256(abi.encode(id, r.startWork))) % 100);
         // CoreState is static: settledThroughRound, cumulativeWork, cumulativeBlockUnits, blockHeight, ...
         (bool ok, uint256[8] memory s) = _read(address(core), abi.encodeCall(ISqueekCore.state, ()), 4);
         if (ok) {

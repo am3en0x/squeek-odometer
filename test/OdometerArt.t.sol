@@ -8,13 +8,20 @@ import {Reading} from "../src/Types.sol";
 import {MockCore, MockNFT, MockStaking} from "./mocks/Mocks.sol";
 
 contract ArtHarness {
-    function svg(Reading memory r) external pure returns (string memory) { return string(OdometerArt.svg(r)); }
+    function svg(Reading memory r) external pure returns (string memory) { return string(OdometerArt.svg(1, r)); }
+    function svgId(uint256 id, Reading memory r) external pure returns (string memory) { return string(OdometerArt.svg(id, r)); }
+    function fur(uint256 roll) external pure returns (uint8) { return OdometerArt.furOf(roll); }
     function json(uint256 id, Reading memory r) external pure returns (string memory) { return string(OdometerArt.json(id, r)); }
     function km(uint256 mm) external pure returns (string memory) { return string(OdometerArt.kmText(mm)); }
 }
 
 contract OdometerArtTest is Test {
     ArtHarness art = new ArtHarness();
+
+    function _rf(uint8 stage, uint8 status, uint8 fur) internal pure returns (Reading memory r) {
+        r = _r(stage, status, false, 1_000_000);
+        r.fur = fur;
+    }
 
     function _r(uint8 stage, uint8 status, bool holder, uint256 mm) internal pure returns (Reading memory r) {
         r.stage = stage;
@@ -132,5 +139,59 @@ contract OdometerArtTest is Test {
         uint256 g = gasleft();
         odo.tokenURI(1);
         assertLt(g - gasleft(), 15_000_000, "an eth_call must stay far below node limits");
+    }
+
+    // ---- the living odometer (2026-11-07): animation, fur, wheel tiers, token number, night sky, LCD ghosts
+
+    function test_awakeHamsterIsAnimatedAndZoomiesAreFaster() public view {
+        string memory jog = art.svg(_r(2, 1, false, 5_000_000));
+        string memory zoom = art.svg(_r(2, 2, false, 5_000_000));
+        string memory nap = art.svg(_r(2, 0, false, 5_000_000));
+        assertTrue(_has(jog, '<animate attributeName="opacity" values="1;0;0" dur=".6s" calcMode="discrete" repeatCount="indefinite"/>'), "spokes spin");
+        assertTrue(_has(jog, 'dur=".4s"'), "legs run");
+        assertTrue(_has(zoom, 'dur=".3s"'), "the wheel spins faster");
+        assertTrue(_has(zoom, 'dur=".2s"'), "the legs too");
+        assertFalse(_has(nap, 'attributeName="opacity"'), "a napping hamster does not run");
+        assertTrue(_has(nap, '<animateTransform attributeName="transform" type="translate"'), "but his z float");
+    }
+
+    function test_furComesFromTheRollWithRarity() public view {
+        assertEq(art.fur(0), 0); assertEq(art.fur(39), 0); // Golden 40%
+        assertEq(art.fur(40), 1); assertEq(art.fur(59), 1); // Cream 20%
+        assertEq(art.fur(60), 2); assertEq(art.fur(74), 2); // Grey 15%
+        assertEq(art.fur(75), 3); assertEq(art.fur(84), 3); // Cinnamon 10%
+        assertEq(art.fur(85), 4); assertEq(art.fur(92), 4); // Shadow 8%
+        assertEq(art.fur(93), 5); assertEq(art.fur(98), 5); // Ghost 6%
+        assertEq(art.fur(99), 6); // Shiny Gold 1%
+        assertTrue(_has(art.svg(_rf(0, 1, 0)), "#e89b47"));
+        assertTrue(_has(art.svg(_rf(0, 1, 6)), "#ffc93a"));
+        assertFalse(_has(art.svg(_rf(0, 1, 6)), "#e89b47"));
+        assertTrue(_has(art.json(1, _rf(0, 1, 6)), '{"trait_type":"Fur","value":"Shiny Gold"}'));
+        assertTrue(_has(art.json(1, _rf(0, 1, 3)), '{"trait_type":"Fur","value":"Cinnamon"}'));
+    }
+
+    function test_theWheelUpgradesWithTheStage() public view {
+        assertTrue(_has(art.svg(_r(0, 1, false, 0)), "#8b95a8"), "steel");
+        assertTrue(_has(art.svg(_r(3, 1, false, 10_000_000)), "#c98a4b"), "bronze for a Runner");
+        assertTrue(_has(art.svg(_r(5, 1, false, 50_000_000)), "#d7dde8"), "silver for a Marathoner");
+        assertTrue(_has(art.svg(_r(6, 1, false, 100_000_000)), "#f5c542"), "gold for a Legend");
+        assertFalse(_has(art.svg(_r(6, 1, false, 100_000_000)), "#8b95a8"));
+    }
+
+    function test_tokenNumberNightSkyAndLcdGhosts() public view {
+        assertTrue(_has(art.svgId(42, _r(0, 1, false, 0)), '<path stroke="#454c5c"'), "the token number");
+        assertTrue(_has(art.svg(_r(0, 0, false, 0)), "#e8ecff"), "stars when he naps");
+        assertFalse(_has(art.svg(_r(0, 1, false, 0)), "#e8ecff"));
+        assertTrue(_has(art.svg(_r(0, 1, false, 0)), "#173a22"), "unlit LCD segments under the digits");
+    }
+
+    function test_theContractRollsFurFromIdAndStart() public {
+        MockCore core = new MockCore();
+        core.set(10, 11_048, 1_140);
+        SqueekOdometer odo = new SqueekOdometer(address(core), address(new MockNFT()), address(new MockStaking()));
+        vm.prank(address(0xA11CE));
+        odo.mint();
+        uint256 roll = uint256(keccak256(abi.encode(uint256(1), uint256(11_048)))) % 100;
+        assertEq(odo.reading(1).fur, art.fur(roll));
     }
 }

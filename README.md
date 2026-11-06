@@ -12,7 +12,10 @@ evolve with the hamster" category. Testnet only. Not affiliated with Squeekchain
 
 ## How a token reads the wheel
 
-Everything is computed in `tokenURI` on every call; the only thing stored per token is its starting point.
+Everything is computed in `tokenURI` on every call; the only thing stored per token is its starting point. The art
+moves: while he runs, the wheel spins and his legs pump (twice as fast with the zoomies, with speed lines); while he
+naps, there are stars, a moon and floating z's. Motion is frame by frame (discrete SMIL), so the pixels stay crisp, and
+a viewer without SMIL shows the first frame.
 
 | What | How |
 |---|---|
@@ -20,6 +23,8 @@ Everything is computed in `tokenURI` on every call; the only thing stored per to
 | Status | Work settled in the last three SqueekCore rounds (30 minutes, `roundPage`): none is **napping**, under 1,500 is **jogging**, 1,500 or more is **zoomies**. If SqueekCore cannot be read, **unknown**. |
 | Stage | Newbie, Warm-up at 1 km, Jogger 5, Runner 10, Racer 25, Marathoner 50, Legend 100. Each stage adds gear: a sweat drop, a headband, shoes, a race bib, a medal, then a crown and cape. |
 | Gold frame | The token's current owner holds a Squeek (`SqueekNFT.balanceOf > 0`) or has Squeeks deposited (`SqueekStaking.accountPower` NFT power > 0). |
+| Wheel | Steel, bronze from Runner, silver for a Marathoner, gold for a Legend. |
+| Fur | The token's own hamster, rolled once from its id and starting work: Golden 40%, Cream 20%, Grey 15%, Cinnamon 10%, Shadow 8%, Ghost 6%, Shiny Gold 1%. |
 
 Odometers count settled work only, so they move a few minutes after the wheel does.
 
@@ -49,8 +54,9 @@ Squeekchain contracts used (Sepolia, release `core-sepolia-20261103`,
 
 ## Art
 
-A 40×40 pixel scene in SVG, drawn on chain. `tools/sprites.py` builds every layer (wheel, the hamster running and
-napping, each stage's gear, moon and zzz, speed lines, a 3×5 odometer font) and writes them to
+A 40×40 pixel scene in SVG, drawn on chain. `tools/sprites.py` builds every layer (stand, rim, three spoke frames,
+the hamster's body running and napping, two leg and shoe frames, each stage's gear, moon, stars and zzz, two
+speed-line frames, a 3×5 odometer font with unlit "8" segments) and writes them to
 `src/art/Sprites.sol` as run data; `src/art/OdometerArt.sol` turns each color group into one SVG path through a
 write-once buffer, so a render costs linear gas.
 

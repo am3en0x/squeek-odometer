@@ -11,4 +11,5 @@ struct Reading {
     bool holder; // the token's owner holds a Squeek, in the wallet or deposited in staking
     uint64 blockHeight; // Squeek block height
     bool live; // SqueekCore answered
+    uint8 fur; // 0 Golden .. 6 Shiny Gold, rolled from the token id and its start
 }

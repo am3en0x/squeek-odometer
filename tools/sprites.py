@@ -1,12 +1,12 @@
 """Pixel sprites for the Squeek Odometer.
 
-Builds every layer of the 40x40 scene from simple shapes, writes them to src/art/Sprites.sol as compact run data,
-and renders previews/*.png with the same layering the contract uses, for looking at the art before it ships.
+Builds every layer of the 40x40 scene from simple shapes and writes them to src/art/Sprites.sol as compact run data.
+To look at the result, render the contract's own SVG: FOUNDRY_PROFILE=gallery forge script script/Gallery.s.sol
 
 Run data per layer: groups of [color index, run count, (x, y, length) * count], one byte each. The contract turns a
 group into one SVG <path stroke="color" d="M x y.5 h length ..."/>, so a layer costs a few hundred bytes.
 
-    python tools/sprites.py            # writes src/art/Sprites.sol and previews/
+    python tools/sprites.py            # writes src/art/Sprites.sol
 """
 import math
 import os
@@ -37,9 +37,10 @@ PALETTE = [
     "#8a93a6",  # 17 unit letters
     "#dbe4ff",  # 18 speed lines
     "#ffd84d",  # 19 crown
+    "#e8ecff",  # 20 star
 ]
 C = {name: i for i, name in enumerate(["_", "outline", "fur", "cream", "pink", "eye", "white", "ring", "spoke",
-                                       "stand", "red", "blue", "gold", "purple", "sweat", "z", "digit", "unit", "speed", "crown"])}
+                                       "stand", "red", "blue", "gold", "purple", "sweat", "z", "digit", "unit", "speed", "crown", "star"])}
 
 # ---------------------------------------------------------------- shape helpers (pixel sets)
 def ellipse(cx, cy, rx, ry):
@@ -98,14 +99,24 @@ def merge(*layers):
 WCX, WCY = 20, 15  # wheel centre
 
 
-def wheel():
-    spokes = set()
+def spokes(offset_deg):
+    out = set()
     for k in range(6):
-        a = math.radians(90 + k * 60)
-        spokes |= line(WCX + 1.8 * math.cos(a), WCY + 1.8 * math.sin(a), WCX + 11.6 * math.cos(a), WCY + 11.6 * math.sin(a))
-    stand = line(16.5, 27.5, 13.5, 30.5) | line(23.5, 27.5, 26.5, 30.5) | rect(11, 30, 18, 1)
-    return merge(paint(stand, "stand"), paint(spokes, "spoke"), paint(ring(WCX, WCY, 12.0, 13.4), "ring"),
-                 paint(ellipse(WCX, WCY, 1.6, 1.6), "spoke"))
+        a = math.radians(90 + offset_deg + k * 60)
+        out |= line(WCX + 1.8 * math.cos(a), WCY + 1.8 * math.sin(a), WCX + 11.6 * math.cos(a), WCY + 11.6 * math.sin(a))
+    return paint(out, "spoke")
+
+
+def stand():
+    return paint(line(16.5, 27.5, 13.5, 30.5) | line(23.5, 27.5, 26.5, 30.5) | rect(11, 30, 18, 1), "stand")
+
+
+def wheel_ring():
+    return paint(ring(WCX, WCY, 12.0, 13.4), "ring")
+
+
+def hub():
+    return paint(ellipse(WCX, WCY, 1.6, 1.6), "spoke")
 
 
 # Hand-drawn hamster, facing right. o outline, f fur, c cream, p pink, e eye, w eye glint, z closed eye.
@@ -122,21 +133,34 @@ HAM_BODY = [
     "..ooooooooooooo...",
 ]
 HAM_NAP_FACE = {(13, 4): "z", (14, 4): "z", (15, 4): "f"}  # eye closed: a dark line over the eye
-RUN_LEGS = ["..oo........oo....", ".oo..........oo..."]  # back leg pushing off, front leg reaching
+LEGS = [  # two running frames: legs stretched (back pushing off, front reaching), then gathered under the body
+    ["..oo........oo....", ".oo..........oo..."],
+    ["...oo......oo.....", "....oo....oo......"],
+]
 COLORS = {"o": "outline", "f": "fur", "c": "cream", "p": "pink", "e": "eye", "w": "white", "z": "eye"}
 RUN_AT, NAP_AT = (11, 15), (11, 17)  # top-left of the sprite in the scene
 
 
 def hamster(pose):
-    """The hamster on the inner bottom of the wheel. Returns (pixels, top-left of the sprite)."""
+    """The hamster's body on the inner bottom of the wheel (legs are separate frames). Returns (pixels, top-left)."""
     ox, oy = RUN_AT if pose == "run" else NAP_AT
     px = from_rows(ox, oy, HAM_BODY, COLORS)
-    if pose == "run":
-        px.update(from_rows(ox, oy + len(HAM_BODY), RUN_LEGS, COLORS))
-    else:
+    if pose == "nap":
         for (x, y), ch in HAM_NAP_FACE.items():
             px[(ox + x, oy + y)] = C[COLORS[ch]]
     return px, (ox, oy)
+
+
+def legs(frame):
+    ox, oy = RUN_AT
+    return from_rows(ox, oy + len(HAM_BODY), LEGS[frame], COLORS)
+
+
+def shoes(frame):
+    """Runner's shoes: the feet (the lower leg row) in blue, frame by frame."""
+    ox, oy = RUN_AT
+    return paint({(ox + i, oy + len(HAM_BODY) + 1) for i, ch in enumerate(LEGS[frame][1]) if ch != "."} |
+                 {(ox + i, oy + len(HAM_BODY)) for i, ch in enumerate(LEGS[frame][0]) if ch != "."}, "blue")
 
 
 def gear(pose):
@@ -146,8 +170,6 @@ def gear(pose):
     g = {}
     g["sweat"] = paint(at({(6, -2), (6, -1), (3, 0)}), "sweat")  # Warm-up: a drop or two off the back
     g["headband"] = paint(at({(x, 2) for x in range(10, 15)} | {(9, 3), (8, 4)}), "red")  # Jogger
-    g["shoes"] = paint(at({(2, 10), (3, 10), (1, 11), (2, 11), (12, 10), (13, 10), (13, 11), (14, 11)}), "blue") \
-        if pose == "run" else {}  # Runner
     g["bib"] = merge(paint(at(set(rect(4, 4, 3, 3))), "white"), paint(at({(5, 4), (5, 5), (5, 6)}), "red"))  # Racer
     g["medal"] = merge(paint(at({(14, 7), (15, 8)}), "blue"), paint(at(set(rect(15, 9, 2, 2))), "gold"))  # Marathoner
     g["cape"] = paint(at({(x, y) for x in range(-5, 4) for y in range(1, 9) if (y - 1) >= (3 - x) * 0.8}),
@@ -156,14 +178,20 @@ def gear(pose):
     return g
 
 
-def zoomies():
-    return paint({(x, y) for y in (18, 21, 24) for x in range(7, 11)} | {(x, 19) for x in range(5, 8)} |
-                 {(x, 23) for x in range(4, 7)}, "speed")
+def zoomies(frame):
+    """Speed lines behind a zooming hamster, two frames that slide."""
+    d = frame
+    return paint({(x - d, y) for y in (18, 21, 24) for x in range(7, 11)} | {(x - d, 19) for x in range(5, 8)} |
+                 {(x - d, 23) for x in range(4, 7)}, "speed")
+
+
+def stars():
+    return paint({(3, 21), (37, 24), (36, 3), (2, 28), (31, 1), (5, 13)}, "star")
 
 
 def zzz():
-    return merge(from_rows(29, 12, ["zzzz", "..z.", ".z..", "zzzz"], {"z": "z"}),
-                 from_rows(34, 8, ["zzz", ".z.", "zzz"], {"z": "z"}))
+    return merge(from_rows(28, 14, ["zzzz", "..z.", ".z..", "zzzz"], {"z": "z"}),
+                 from_rows(33, 10, ["zzz", ".z.", "zzz"], {"z": "z"}))
 
 
 def moon():
@@ -185,16 +213,23 @@ LAYERS = {}
 
 
 def build():
-    LAYERS["WHEEL"] = wheel()
+    LAYERS["STAND"] = stand()
+    LAYERS["RING"] = wheel_ring()
+    for i, deg in enumerate((0, 20, 40)):
+        LAYERS[f"SPOKES_{i}"] = spokes(deg)
+    LAYERS["HUB"] = hub()
     for pose in ("run", "nap"):
         px, _ = hamster(pose)
         LAYERS["HAMSTER_" + pose.upper()] = px
         for k, v in gear(pose).items():
-            if v:
-                LAYERS[(k + "_" + pose).upper()] = v
-    LAYERS["ZOOMIES"] = zoomies()
+            LAYERS[(k + "_" + pose).upper()] = v
+    for f in (0, 1):
+        LAYERS[f"LEGS_{f}"] = legs(f)
+        LAYERS[f"SHOES_{f}"] = shoes(f)
+        LAYERS[f"ZOOMIES_{f}"] = zoomies(f)
     LAYERS["ZZZ"] = zzz()
     LAYERS["MOON"] = moon()
+    LAYERS["STARS"] = stars()
 
 
 # ---------------------------------------------------------------- encoding
@@ -272,68 +307,6 @@ def write_solidity():
     print(f"wrote {path}: {len(LAYERS)} layers, {total} bytes of run data")
 
 
-# ---------------------------------------------------------------- previews (same layering as OdometerArt.sol)
-STAGE_BG = ["#1b2232", "#1c2a38", "#1b3530", "#273520", "#3a2c1c", "#3a1c2a", "#2a1c3a"]
-STAGE_GEAR = [[], ["SWEAT"], ["SWEAT", "HEADBAND"], ["SWEAT", "HEADBAND", "SHOES"],
-              ["SWEAT", "HEADBAND", "SHOES", "BIB"], ["SWEAT", "HEADBAND", "SHOES", "BIB", "MEDAL"],
-              ["HEADBAND", "SHOES", "BIB", "MEDAL", "CROWN"]]
-
-
-def preview(stage, status, holder, text, scale=12):
-    from PIL import Image, ImageDraw
-    img = Image.new("RGB", (W * scale, H * scale), STAGE_BG[stage])
-    d = ImageDraw.Draw(img)
-
-    def put(px):
-        for (x, y), c in px.items():
-            d.rectangle([x * scale, y * scale, (x + 1) * scale - 1, (y + 1) * scale - 1], fill=PALETTE[c])
-
-    pose = "nap" if status in (0, 3) else "run"
-    if status == 0:
-        put(LAYERS["MOON"])
-    put(LAYERS["WHEEL"])
-    if status == 2:
-        put(LAYERS["ZOOMIES"])
-    if stage == 6:
-        put(LAYERS["CAPE_" + pose.upper()])
-    put(LAYERS["HAMSTER_" + pose.upper()])
-    for g in STAGE_GEAR[stage]:
-        key = g + "_" + pose.upper()
-        if key in LAYERS:
-            put(LAYERS[key])
-    if status == 0:
-        put(LAYERS["ZZZ"])
-    # odometer panel and text
-    d.rectangle([3 * scale, 31 * scale, 37 * scale - 1, 38 * scale - 1], fill="#0b0e14")
-    x = 5
-    for ch in text:
-        w, rs = glyph_runs(ch)
-        for (dx, dy, n) in rs:
-            col = PALETTE[C["unit"]] if ch in "KM" else PALETTE[C["digit"]]
-            d.rectangle([(x + dx) * scale, (32 + dy) * scale, (x + dx + n) * scale - 1, (33 + dy) * scale - 1], fill=col)
-        x += w + 1
-    frame = "#f5b301" if holder else "#3a4150"
-    width = 2 if holder else 1
-    for i in range(width):
-        d.rectangle([i * scale, i * scale, (W - i) * scale - 1, (H - i) * scale - 1], outline=frame, width=scale)
-    return img
-
-
 if __name__ == "__main__":
     build()
     write_solidity()
-    if "--no-previews" not in sys.argv:
-        os.makedirs(os.path.join(ROOT, "previews"), exist_ok=True)
-        from PIL import Image
-        tiles = []
-        texts = ["0.42KM", "1.07KM", "5.31KM", "12.73KM", "27.90KM", "58.12KM", "104.66KM"]
-        for stage in range(7):
-            for status in (1, 2, 0):
-                tiles.append(preview(stage, status, stage % 2 == 1, texts[stage], scale=6))
-        sheet = Image.new("RGB", (W * 6 * 3 + 20, H * 6 * 7 + 60), "#000000")
-        for i, t in enumerate(tiles):
-            sheet.paste(t, ((i % 3) * (W * 6 + 10), (i // 3) * (H * 6 + 10)))
-        sheet.save(os.path.join(ROOT, "previews", "sheet.png"))
-        preview(6, 2, True, "104.66KM").save(os.path.join(ROOT, "previews", "legend-zoomies-holder.png"))
-        preview(2, 1, False, "5.31KM").save(os.path.join(ROOT, "previews", "jogger-jogging.png"))
-        print("previews in", os.path.join(ROOT, "previews"))

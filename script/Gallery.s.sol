@@ -27,9 +27,10 @@ contract Gallery is Script {
                 r.holder = stage % 2 == 1;
                 r.distanceMm = mm[stage];
                 r.live = r.status != 3;
+                r.fur = (stage + k) % 7;
                 html = string.concat(html, '<figure style="display:inline-block;margin:0 14px 10px 0;text-align:center">',
-                    string(OdometerArt.svg(r)), '<figcaption style="color:#9aa3b5;font:12px ui-monospace,monospace">',
-                    statuses[k], "</figcaption></figure>");
+                    string(OdometerArt.svg(uint256(stage) * 4 + k + 1, r)), '<figcaption style="color:#9aa3b5;font:12px ui-monospace,monospace">',
+                    statuses[k], " &middot; ", OdometerArt.furName(r.fur), "</figcaption></figure>");
             }
             html = string.concat(html, "</div>");
         }
@@ -38,7 +39,7 @@ contract Gallery is Script {
         Reading memory fresh;
         fresh.status = 1;
         fresh.live = true;
-        vm.writeFile("site/placeholder.svg", string(OdometerArt.svg(fresh)));
-        vm.writeFile("site/favicon.svg", string(OdometerArt.svg(fresh)));
+        vm.writeFile("site/placeholder.svg", string(OdometerArt.svg(1, fresh)));
+        vm.writeFile("site/favicon.svg", string(OdometerArt.svg(1, fresh)));
     }
 }
