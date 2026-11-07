@@ -6,7 +6,7 @@ Builds every layer of the scene and writes them to src/art/Sprites.sol as compac
 subtracts it), so a layer may run past the edge. The scene is drawn on a 40x40 grid and shown through a 32x32 window
 (x 4..35, y 8..39), so the wheel's top crops off and Squeektoshi fills the frame.
 
-To look at the result, render the contract's own SVG: FOUNDRY_PROFILE=gallery forge script script/Gallery.s.sol
+To look at the result, render the contract's own SVG: python3 tools/export_gallery.py
 
     python tools/sprites.py            # writes src/art/Sprites.sol
 """

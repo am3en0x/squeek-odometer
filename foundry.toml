@@ -12,7 +12,12 @@ no_match_path = "test/fork/*"
 
 [profile.default.fuzz]
 runs = 512
-seed = "0x0ab8c2222aac46ead67626443e3bee9ecc417ccea521825751dd0adc52d13b3b"
+seed = "0x85fa591383f4e7b776f91b5633053b3d8132526e6370e1e924ac214f2266ba93"
+
+[profile.default.invariant]
+runs = 128
+depth = 64
+fail_on_revert = true
 
 [fmt]
 line_length = 120
@@ -25,6 +30,3 @@ no_match_path = "test/mocks/*"
 [rpc_endpoints]
 sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
 
-# The art of every stage x status x holder from the contract itself: forge script script/Gallery.s.sol --profile gallery
-[profile.gallery]
-fs_permissions = [{ access = "write", path = "./previews" }, { access = "write", path = "./dist" }]

@@ -16,12 +16,11 @@ import {ERC1155} from "../ERC1155.sol";
 // slither-disable-next-line locked-ether
 abstract contract ERC1155Crosschain is BridgeMultiToken, ERC1155 {
     /// @dev Equivalent to `crosschainTransferFrom(from, to, id, value, "")`.
-    function crosschainTransferFrom(
-        address from,
-        bytes memory to,
-        uint256 id,
-        uint256 value
-    ) public virtual returns (bytes32) {
+    function crosschainTransferFrom(address from, bytes memory to, uint256 id, uint256 value)
+        public
+        virtual
+        returns (bytes32)
+    {
         return crosschainTransferFrom(from, to, id, value, "");
     }
 
@@ -29,13 +28,11 @@ abstract contract ERC1155Crosschain is BridgeMultiToken, ERC1155 {
      * @dev TransferFrom variant of {crosschainTransferFrom}, using ERC1155 allowance from the sender to the caller.
      * `data` is forwarded to the destination-chain ERC-1155 receiver's acceptance hook.
      */
-    function crosschainTransferFrom(
-        address from,
-        bytes memory to,
-        uint256 id,
-        uint256 value,
-        bytes memory data
-    ) public virtual returns (bytes32) {
+    function crosschainTransferFrom(address from, bytes memory to, uint256 id, uint256 value, bytes memory data)
+        public
+        virtual
+        returns (bytes32)
+    {
         _checkAuthorized(_msgSender(), from);
 
         uint256[] memory ids = new uint256[](1);
@@ -46,12 +43,11 @@ abstract contract ERC1155Crosschain is BridgeMultiToken, ERC1155 {
     }
 
     /// @dev Equivalent to `crosschainTransferFrom(from, to, ids, values, "")`.
-    function crosschainTransferFrom(
-        address from,
-        bytes memory to,
-        uint256[] memory ids,
-        uint256[] memory values
-    ) public virtual returns (bytes32) {
+    function crosschainTransferFrom(address from, bytes memory to, uint256[] memory ids, uint256[] memory values)
+        public
+        virtual
+        returns (bytes32)
+    {
         return crosschainTransferFrom(from, to, ids, values, "");
     }
 
@@ -76,12 +72,11 @@ abstract contract ERC1155Crosschain is BridgeMultiToken, ERC1155 {
     }
 
     /// @dev "Unlocking" tokens is achieved through minting.
-    function _onReceive(
-        address to,
-        uint256[] memory ids,
-        uint256[] memory values,
-        bytes memory data
-    ) internal virtual override {
+    function _onReceive(address to, uint256[] memory ids, uint256[] memory values, bytes memory data)
+        internal
+        virtual
+        override
+    {
         _mintBatch(to, ids, values, data);
     }
 }

@@ -96,16 +96,16 @@ library RateLimiter {
      * NOTE: A `window` of 0 is treated as 1 second in the refill computation: the effective refill rate becomes
      * `capacity` per second, and an uninitialized limiter (`capacity = window = 0`) reports as an empty bucket.
      */
-    function state(
-        RefillingBucket storage self,
-        bytes32 key
-    ) internal view returns (uint256 used_, uint256 available_) {
+    function state(RefillingBucket storage self, bytes32 key)
+        internal
+        view
+        returns (uint256 used_, uint256 available_)
+    {
         uint208 capacity_ = self._capacity; // cache
         RefillingBucketItem storage item_ = self._items[key]; // cache
 
         used_ = Math.saturatingSub(
-            item_._lastUsed,
-            Math.mulDiv(Time.timestamp() - item_._lastTimepoint, capacity_, Math.max(self._window, 1))
+            item_._lastUsed, Math.mulDiv(Time.timestamp() - item_._lastTimepoint, capacity_, Math.max(self._window, 1))
         );
         available_ = Math.saturatingSub(capacity_, used_);
     }
@@ -114,7 +114,7 @@ library RateLimiter {
      * @dev Returns the currently used quantity. See {state-struct-RateLimiter-RefillingBucket-bytes32}.
      */
     function used(RefillingBucket storage self, bytes32 key) internal view returns (uint256 used_) {
-        (used_, ) = state(self, key);
+        (used_,) = state(self, key);
     }
 
     /**
@@ -137,8 +137,7 @@ library RateLimiter {
         (uint256 used_, uint256 available_) = state(self, key);
         if (quantity <= available_) {
             self._items[key] = RefillingBucketItem({
-                _lastTimepoint: Time.timestamp(),
-                _lastUsed: SafeCast.toUint208(used_ + quantity)
+                _lastTimepoint: Time.timestamp(), _lastUsed: SafeCast.toUint208(used_ + quantity)
             });
             return true;
         } else {
@@ -235,7 +234,7 @@ library RateLimiter {
      * {state-struct-RateLimiter-SlidingWindow-bytes32}.
      */
     function used(SlidingWindow storage self, bytes32 key) internal view returns (uint256 used_) {
-        (used_, ) = state(self, key);
+        (used_,) = state(self, key);
     }
 
     /**

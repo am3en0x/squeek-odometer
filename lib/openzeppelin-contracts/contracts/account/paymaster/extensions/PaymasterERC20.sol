@@ -68,10 +68,7 @@ abstract contract PaymasterERC20 is Paymaster {
      * and `tokenPerNative` is the valuation of the token in units of token per native currency (e.g., ETH).
      */
     event UserOperationSponsored(
-        bytes32 indexed userOpHash,
-        address indexed token,
-        uint256 tokenAmount,
-        uint256 tokenPerNative
+        bytes32 indexed userOpHash, address indexed token, uint256 tokenAmount, uint256 tokenPerNative
     );
 
     /**
@@ -89,18 +86,20 @@ abstract contract PaymasterERC20 is Paymaster {
      * Returns `abi.encodePacked(userOpHash, token, tokenPerNative, prefundAmount, prefunder, penaltyGas, prefundContext)`
      * in `context` if the prefund is successful. Otherwise, it returns empty bytes.
      */
-    function _validatePaymasterUserOp(
-        PackedUserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256 maxCost
-    ) internal virtual override returns (bytes memory context, uint256 validationData) {
+    function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
+        internal
+        virtual
+        override
+        returns (bytes memory context, uint256 validationData)
+    {
         IERC20 token;
         uint256 tokenPerNative;
         address userOpSender = userOp.sender;
         (validationData, token, tokenPerNative) = _fetchDetails(userOp, userOpHash);
 
-        if (uint160(validationData) == ERC4337Utils.SIG_VALIDATION_FAILED || tokenPerNative < _minTokensPerNative())
+        if (uint160(validationData) == ERC4337Utils.SIG_VALIDATION_FAILED || tokenPerNative < _minTokensPerNative()) {
             return (bytes(""), ERC4337Utils.SIG_VALIDATION_FAILED);
+        }
 
         // Worst-case unused-gas penalty that the EntryPoint may debit from the paymaster's deposit for the
         // user-controlled `paymasterPostOpGasLimit` (see {_postOpGasPenalty}). The EntryPoint computes this penalty
@@ -111,9 +110,7 @@ abstract contract PaymasterERC20 is Paymaster {
         // Only the part of the limit above {_postOpGasBudget} can go unused: the paymaster bills the budget in full
         // through {_postOpCost}, so charging a penalty on it would bill the sender twice for gas the paymaster
         // itself demanded.
-        uint256 penaltyGas = _postOpGasPenalty(
-            userOp.paymasterPostOpGasLimit().saturatingSub(_postOpGasBudget(userOp))
-        );
+        uint256 penaltyGas = _postOpGasPenalty(userOp.paymasterPostOpGasLimit().saturatingSub(_postOpGasBudget(userOp)));
 
         // If the _erc20Cost math fails, the returned value will be type(uint256).max, which we will never be able
         // to charge as a prefund. The `trySafeTransferFrom` in the `_prefund` will fail, causing success to be false.
@@ -125,30 +122,17 @@ abstract contract PaymasterERC20 is Paymaster {
             _postOpCost().saturatingAdd(penaltyGas).saturatingMul(userOp.maxFeePerGas()).saturatingAdd(maxCost),
             tokenPerNative
         );
-        (bool success, address prefunder, uint256 prefundAmount, bytes memory prefundContext) = _prefund(
-            userOp,
-            userOpHash,
-            token,
-            tokenPerNative,
-            userOpSender,
-            maxTokenCost
-        );
+        (bool success, address prefunder, uint256 prefundAmount, bytes memory prefundContext) =
+            _prefund(userOp, userOpHash, token, tokenPerNative, userOpSender, maxTokenCost);
 
-        return
-            success
-                ? (
-                    abi.encodePacked(
-                        userOpHash,
-                        token,
-                        tokenPerNative,
-                        prefundAmount,
-                        prefunder,
-                        penaltyGas,
-                        prefundContext
-                    ),
-                    validationData
-                )
-                : (bytes(""), ERC4337Utils.SIG_VALIDATION_FAILED);
+        return success
+            ? (
+                abi.encodePacked(
+                    userOpHash, token, tokenPerNative, prefundAmount, prefunder, penaltyGas, prefundContext
+                ),
+                validationData
+            )
+            : (bytes(""), ERC4337Utils.SIG_VALIDATION_FAILED);
     }
 
     /**
@@ -165,10 +149,13 @@ abstract contract PaymasterERC20 is Paymaster {
      * to ERC-7562 validation rules.
      */
     function _prefund(
-        PackedUserOperation calldata /* userOp */,
-        bytes32 /* userOpHash */,
+        PackedUserOperation calldata,
+        /* userOp */
+        bytes32,
+        /* userOpHash */
         IERC20 token,
-        uint256 /* tokenPerNative */,
+        uint256,
+        /* tokenPerNative */
         address prefunder_,
         uint256 prefundAmount_
     ) internal virtual returns (bool success, address prefunder, uint256 prefundAmount, bytes memory prefundContext) {
@@ -187,11 +174,16 @@ abstract contract PaymasterERC20 is Paymaster {
      * picking a limit below the actual postOp cost.
      */
     function _postOp(
-        PostOpMode /* mode */,
+        PostOpMode,
+        /* mode */
         bytes calldata context,
         uint256 actualGasCost,
         uint256 actualUserOpFeePerGas
-    ) internal virtual override {
+    )
+        internal
+        virtual
+        override
+    {
         bytes32 userOpHash = bytes32(context[0x00:0x20]);
         IERC20 token = IERC20(address(bytes20(context[0x20:0x34])));
         uint256 tokenPerNative = uint256(bytes32(context[0x34:0x54]));
@@ -211,13 +203,7 @@ abstract contract PaymasterERC20 is Paymaster {
             tokenPerNative
         );
         (bool success, uint256 actualAmount) = _refund(
-            token,
-            tokenPerNative,
-            actualTokenCost,
-            actualUserOpFeePerGas,
-            prefunder,
-            prefundAmount,
-            prefundContext
+            token, tokenPerNative, actualTokenCost, actualUserOpFeePerGas, prefunder, prefundAmount, prefundContext
         );
         if (!success) revert PaymasterERC20FailedRefund(token, prefundAmount, actualAmount, prefundContext);
 
@@ -238,9 +224,11 @@ abstract contract PaymasterERC20 is Paymaster {
      */
     function _refund(
         IERC20 token,
-        uint256 /* tokenPerNative */,
+        uint256,
+        /* tokenPerNative */
         uint256 actualAmount_,
-        uint256 /* actualUserOpFeePerGas */,
+        uint256,
+        /* actualUserOpFeePerGas */
         address prefunder,
         uint256 prefundAmount,
         bytes calldata /* prefundContext */
@@ -279,10 +267,11 @@ abstract contract PaymasterERC20 is Paymaster {
      * `_tokenPerNativeDenominator() = 1e18` we have `tokenPerNative = 2_524_860_000` (i.e. `2.52486e-9 * 1e18`). Charging
      * `actualGasCost` wei yields `actualGasCost * 2_524_860_000 / 1e18` USDC units.
      */
-    function _fetchDetails(
-        PackedUserOperation calldata userOp,
-        bytes32 userOpHash
-    ) internal view virtual returns (uint256 validationData, IERC20 token, uint256 tokenPerNative);
+    function _fetchDetails(PackedUserOperation calldata userOp, bytes32 userOpHash)
+        internal
+        view
+        virtual
+        returns (uint256 validationData, IERC20 token, uint256 tokenPerNative);
 
     /**
      * @dev Over-estimates the cost of the post-operation logic, which the EntryPoint charges to the paymaster but
@@ -311,7 +300,14 @@ abstract contract PaymasterERC20 is Paymaster {
      * {_validatePaymasterUserOp} above what the EntryPoint debits. A budget larger than what is billed under-prices
      * the penalty and settles operations at a loss.
      */
-    function _postOpGasBudget(PackedUserOperation calldata /* userOp */) internal view virtual returns (uint256) {
+    function _postOpGasBudget(
+        PackedUserOperation calldata /* userOp */
+    )
+        internal
+        view
+        virtual
+        returns (uint256)
+    {
         return _postOpCost();
     }
 
@@ -376,14 +372,12 @@ abstract contract PaymasterERC20 is Paymaster {
      */
     function _erc20Cost(uint256 nativeCost, uint256 tokenPerNative) internal view virtual returns (uint256) {
         uint256 denominator = _tokenPerNativeDenominator();
-        (uint256 high, ) = nativeCost.mul512(tokenPerNative);
+        (uint256 high,) = nativeCost.mul512(tokenPerNative);
         // Round up using a saturating add to avoid possible overflow of the rounding.
-        return
-            high < denominator
-                ? nativeCost.mulDiv(tokenPerNative, denominator).saturatingAdd(
-                    (mulmod(nativeCost, tokenPerNative, denominator) > 0).toUint()
-                )
-                : type(uint256).max;
+        return high < denominator
+            ? nativeCost.mulDiv(tokenPerNative, denominator)
+                .saturatingAdd((mulmod(nativeCost, tokenPerNative, denominator) > 0).toUint())
+            : type(uint256).max;
     }
 
     /// @dev Internal function that allows the withdrawer to extract ERC-20 tokens resulting from gas payments.

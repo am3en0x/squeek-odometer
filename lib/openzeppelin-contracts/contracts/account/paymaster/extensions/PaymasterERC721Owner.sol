@@ -39,9 +39,15 @@ abstract contract PaymasterERC721Owner is Paymaster {
      */
     function _validatePaymasterUserOp(
         PackedUserOperation calldata userOp,
-        bytes32 /* userOpHash */,
+        bytes32,
+        /* userOpHash */
         uint256 /* maxCost */
-    ) internal virtual override returns (bytes memory context, uint256 validationData) {
+    )
+        internal
+        virtual
+        override
+        returns (bytes memory context, uint256 validationData)
+    {
         return (
             bytes(""),
             // balanceOf reverts if the `userOp.sender` is the address(0), so this becomes unreachable with address(0)

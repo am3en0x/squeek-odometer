@@ -36,11 +36,10 @@ library Checkpoints {
      * IMPORTANT: Never accept `key` as a user input, since an arbitrary `type(uint256).max` key set will disable the
      * library.
      */
-    function push(
-        Trace256 storage self,
-        uint256 key,
-        uint256 value
-    ) internal returns (uint256 oldValue, uint256 newValue) {
+    function push(Trace256 storage self, uint256 key, uint256 value)
+        internal
+        returns (uint256 oldValue, uint256 newValue)
+    {
         return _insert(self._checkpoints, key, value);
     }
 
@@ -143,11 +142,10 @@ library Checkpoints {
      * @dev Pushes a (`key`, `value`) pair into an ordered list of checkpoints, either by inserting a new checkpoint,
      * or by updating the last one.
      */
-    function _insert(
-        Checkpoint256[] storage self,
-        uint256 key,
-        uint256 value
-    ) private returns (uint256 oldValue, uint256 newValue) {
+    function _insert(Checkpoint256[] storage self, uint256 key, uint256 value)
+        private
+        returns (uint256 oldValue, uint256 newValue)
+    {
         uint256 len = self.length;
 
         if (len > 0) {
@@ -180,12 +178,11 @@ library Checkpoints {
      *
      * WARNING: `high` should not be greater than the array's length.
      */
-    function _upperBinaryLookup(
-        Checkpoint256[] storage self,
-        uint256 key,
-        uint256 low,
-        uint256 high
-    ) private view returns (uint256) {
+    function _upperBinaryLookup(Checkpoint256[] storage self, uint256 key, uint256 low, uint256 high)
+        private
+        view
+        returns (uint256)
+    {
         while (low < high) {
             uint256 mid = Math.average(low, high);
             if (_unsafeAccess(self, mid)._key > key) {
@@ -204,12 +201,11 @@ library Checkpoints {
      *
      * WARNING: `high` should not be greater than the array's length.
      */
-    function _lowerBinaryLookup(
-        Checkpoint256[] storage self,
-        uint256 key,
-        uint256 low,
-        uint256 high
-    ) private view returns (uint256) {
+    function _lowerBinaryLookup(Checkpoint256[] storage self, uint256 key, uint256 low, uint256 high)
+        private
+        view
+        returns (uint256)
+    {
         while (low < high) {
             uint256 mid = Math.average(low, high);
             if (_unsafeAccess(self, mid)._key < key) {
@@ -224,10 +220,11 @@ library Checkpoints {
     /**
      * @dev Access an element of the array without performing bounds check. The position is assumed to be within bounds.
      */
-    function _unsafeAccess(
-        Checkpoint256[] storage self,
-        uint256 index
-    ) private pure returns (Checkpoint256 storage result) {
+    function _unsafeAccess(Checkpoint256[] storage self, uint256 index)
+        private
+        pure
+        returns (Checkpoint256 storage result)
+    {
         assembly {
             mstore(0x00, self.slot)
             result.slot := add(keccak256(0x00, 0x20), mul(index, 2))
@@ -251,11 +248,10 @@ library Checkpoints {
      * IMPORTANT: Never accept `key` as a user input, since an arbitrary `type(uint32).max` key set will disable the
      * library.
      */
-    function push(
-        Trace224 storage self,
-        uint32 key,
-        uint224 value
-    ) internal returns (uint224 oldValue, uint224 newValue) {
+    function push(Trace224 storage self, uint32 key, uint224 value)
+        internal
+        returns (uint224 oldValue, uint224 newValue)
+    {
         return _insert(self._checkpoints, key, value);
     }
 
@@ -358,11 +354,10 @@ library Checkpoints {
      * @dev Pushes a (`key`, `value`) pair into an ordered list of checkpoints, either by inserting a new checkpoint,
      * or by updating the last one.
      */
-    function _insert(
-        Checkpoint224[] storage self,
-        uint32 key,
-        uint224 value
-    ) private returns (uint224 oldValue, uint224 newValue) {
+    function _insert(Checkpoint224[] storage self, uint32 key, uint224 value)
+        private
+        returns (uint224 oldValue, uint224 newValue)
+    {
         uint256 len = self.length;
 
         if (len > 0) {
@@ -395,12 +390,11 @@ library Checkpoints {
      *
      * WARNING: `high` should not be greater than the array's length.
      */
-    function _upperBinaryLookup(
-        Checkpoint224[] storage self,
-        uint32 key,
-        uint256 low,
-        uint256 high
-    ) private view returns (uint256) {
+    function _upperBinaryLookup(Checkpoint224[] storage self, uint32 key, uint256 low, uint256 high)
+        private
+        view
+        returns (uint256)
+    {
         while (low < high) {
             uint256 mid = Math.average(low, high);
             if (_unsafeAccess(self, mid)._key > key) {
@@ -419,12 +413,11 @@ library Checkpoints {
      *
      * WARNING: `high` should not be greater than the array's length.
      */
-    function _lowerBinaryLookup(
-        Checkpoint224[] storage self,
-        uint32 key,
-        uint256 low,
-        uint256 high
-    ) private view returns (uint256) {
+    function _lowerBinaryLookup(Checkpoint224[] storage self, uint32 key, uint256 low, uint256 high)
+        private
+        view
+        returns (uint256)
+    {
         while (low < high) {
             uint256 mid = Math.average(low, high);
             if (_unsafeAccess(self, mid)._key < key) {
@@ -439,10 +432,11 @@ library Checkpoints {
     /**
      * @dev Access an element of the array without performing bounds check. The position is assumed to be within bounds.
      */
-    function _unsafeAccess(
-        Checkpoint224[] storage self,
-        uint256 index
-    ) private pure returns (Checkpoint224 storage result) {
+    function _unsafeAccess(Checkpoint224[] storage self, uint256 index)
+        private
+        pure
+        returns (Checkpoint224 storage result)
+    {
         assembly {
             mstore(0x00, self.slot)
             result.slot := add(keccak256(0x00, 0x20), index)
@@ -466,11 +460,10 @@ library Checkpoints {
      * IMPORTANT: Never accept `key` as a user input, since an arbitrary `type(uint48).max` key set will disable the
      * library.
      */
-    function push(
-        Trace208 storage self,
-        uint48 key,
-        uint208 value
-    ) internal returns (uint208 oldValue, uint208 newValue) {
+    function push(Trace208 storage self, uint48 key, uint208 value)
+        internal
+        returns (uint208 oldValue, uint208 newValue)
+    {
         return _insert(self._checkpoints, key, value);
     }
 
@@ -573,11 +566,10 @@ library Checkpoints {
      * @dev Pushes a (`key`, `value`) pair into an ordered list of checkpoints, either by inserting a new checkpoint,
      * or by updating the last one.
      */
-    function _insert(
-        Checkpoint208[] storage self,
-        uint48 key,
-        uint208 value
-    ) private returns (uint208 oldValue, uint208 newValue) {
+    function _insert(Checkpoint208[] storage self, uint48 key, uint208 value)
+        private
+        returns (uint208 oldValue, uint208 newValue)
+    {
         uint256 len = self.length;
 
         if (len > 0) {
@@ -610,12 +602,11 @@ library Checkpoints {
      *
      * WARNING: `high` should not be greater than the array's length.
      */
-    function _upperBinaryLookup(
-        Checkpoint208[] storage self,
-        uint48 key,
-        uint256 low,
-        uint256 high
-    ) private view returns (uint256) {
+    function _upperBinaryLookup(Checkpoint208[] storage self, uint48 key, uint256 low, uint256 high)
+        private
+        view
+        returns (uint256)
+    {
         while (low < high) {
             uint256 mid = Math.average(low, high);
             if (_unsafeAccess(self, mid)._key > key) {
@@ -634,12 +625,11 @@ library Checkpoints {
      *
      * WARNING: `high` should not be greater than the array's length.
      */
-    function _lowerBinaryLookup(
-        Checkpoint208[] storage self,
-        uint48 key,
-        uint256 low,
-        uint256 high
-    ) private view returns (uint256) {
+    function _lowerBinaryLookup(Checkpoint208[] storage self, uint48 key, uint256 low, uint256 high)
+        private
+        view
+        returns (uint256)
+    {
         while (low < high) {
             uint256 mid = Math.average(low, high);
             if (_unsafeAccess(self, mid)._key < key) {
@@ -654,10 +644,11 @@ library Checkpoints {
     /**
      * @dev Access an element of the array without performing bounds check. The position is assumed to be within bounds.
      */
-    function _unsafeAccess(
-        Checkpoint208[] storage self,
-        uint256 index
-    ) private pure returns (Checkpoint208 storage result) {
+    function _unsafeAccess(Checkpoint208[] storage self, uint256 index)
+        private
+        pure
+        returns (Checkpoint208 storage result)
+    {
         assembly {
             mstore(0x00, self.slot)
             result.slot := add(keccak256(0x00, 0x20), index)
@@ -681,11 +672,10 @@ library Checkpoints {
      * IMPORTANT: Never accept `key` as a user input, since an arbitrary `type(uint96).max` key set will disable the
      * library.
      */
-    function push(
-        Trace160 storage self,
-        uint96 key,
-        uint160 value
-    ) internal returns (uint160 oldValue, uint160 newValue) {
+    function push(Trace160 storage self, uint96 key, uint160 value)
+        internal
+        returns (uint160 oldValue, uint160 newValue)
+    {
         return _insert(self._checkpoints, key, value);
     }
 
@@ -788,11 +778,10 @@ library Checkpoints {
      * @dev Pushes a (`key`, `value`) pair into an ordered list of checkpoints, either by inserting a new checkpoint,
      * or by updating the last one.
      */
-    function _insert(
-        Checkpoint160[] storage self,
-        uint96 key,
-        uint160 value
-    ) private returns (uint160 oldValue, uint160 newValue) {
+    function _insert(Checkpoint160[] storage self, uint96 key, uint160 value)
+        private
+        returns (uint160 oldValue, uint160 newValue)
+    {
         uint256 len = self.length;
 
         if (len > 0) {
@@ -825,12 +814,11 @@ library Checkpoints {
      *
      * WARNING: `high` should not be greater than the array's length.
      */
-    function _upperBinaryLookup(
-        Checkpoint160[] storage self,
-        uint96 key,
-        uint256 low,
-        uint256 high
-    ) private view returns (uint256) {
+    function _upperBinaryLookup(Checkpoint160[] storage self, uint96 key, uint256 low, uint256 high)
+        private
+        view
+        returns (uint256)
+    {
         while (low < high) {
             uint256 mid = Math.average(low, high);
             if (_unsafeAccess(self, mid)._key > key) {
@@ -849,12 +837,11 @@ library Checkpoints {
      *
      * WARNING: `high` should not be greater than the array's length.
      */
-    function _lowerBinaryLookup(
-        Checkpoint160[] storage self,
-        uint96 key,
-        uint256 low,
-        uint256 high
-    ) private view returns (uint256) {
+    function _lowerBinaryLookup(Checkpoint160[] storage self, uint96 key, uint256 low, uint256 high)
+        private
+        view
+        returns (uint256)
+    {
         while (low < high) {
             uint256 mid = Math.average(low, high);
             if (_unsafeAccess(self, mid)._key < key) {
@@ -869,10 +856,11 @@ library Checkpoints {
     /**
      * @dev Access an element of the array without performing bounds check. The position is assumed to be within bounds.
      */
-    function _unsafeAccess(
-        Checkpoint160[] storage self,
-        uint256 index
-    ) private pure returns (Checkpoint160 storage result) {
+    function _unsafeAccess(Checkpoint160[] storage self, uint256 index)
+        private
+        pure
+        returns (Checkpoint160 storage result)
+    {
         assembly {
             mstore(0x00, self.slot)
             result.slot := add(keccak256(0x00, 0x20), index)

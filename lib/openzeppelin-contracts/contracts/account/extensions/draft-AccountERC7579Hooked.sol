@@ -56,22 +56,24 @@ abstract contract AccountERC7579Hooked is AccountERC7579 {
     }
 
     /// @inheritdoc AccountERC7579
-    function isModuleInstalled(
-        uint256 moduleTypeId,
-        address module,
-        bytes calldata data
-    ) public view virtual override returns (bool) {
-        return
-            (moduleTypeId == MODULE_TYPE_HOOK && module == hook()) ||
-            super.isModuleInstalled(moduleTypeId, module, data);
+    function isModuleInstalled(uint256 moduleTypeId, address module, bytes calldata data)
+        public
+        view
+        virtual
+        override
+        returns (bool)
+    {
+        return (moduleTypeId == MODULE_TYPE_HOOK && module == hook())
+            || super.isModuleInstalled(moduleTypeId, module, data);
     }
 
     /// @dev Installs a module with support for hook modules. See {AccountERC7579-_installModule}
-    function _installModule(
-        uint256 moduleTypeId,
-        address module,
-        bytes memory initData
-    ) internal virtual override withHook {
+    function _installModule(uint256 moduleTypeId, address module, bytes memory initData)
+        internal
+        virtual
+        override
+        withHook
+    {
         if (moduleTypeId == MODULE_TYPE_HOOK) {
             require(_hook == address(0), ERC7579HookModuleAlreadyPresent(_hook));
             _hook = module;
@@ -86,11 +88,12 @@ abstract contract AccountERC7579Hooked is AccountERC7579 {
      * there blocks its removal. Since `_execute` is `withHook`-gated too, the delegatecall escape hatch does not
      * apply, and such a hook may be impossible to uninstall.
      */
-    function _uninstallModule(
-        uint256 moduleTypeId,
-        address module,
-        bytes memory deInitData
-    ) internal virtual override withHook {
+    function _uninstallModule(uint256 moduleTypeId, address module, bytes memory deInitData)
+        internal
+        virtual
+        override
+        withHook
+    {
         if (moduleTypeId == MODULE_TYPE_HOOK) {
             require(_hook == module, ERC7579Utils.ERC7579UninstalledModule(moduleTypeId, module));
             _hook = address(0);
@@ -99,10 +102,13 @@ abstract contract AccountERC7579Hooked is AccountERC7579 {
     }
 
     /// @dev Hooked version of {AccountERC7579-_execute}.
-    function _execute(
-        Mode mode,
-        bytes calldata executionCalldata
-    ) internal virtual override withHook returns (bytes[] memory) {
+    function _execute(Mode mode, bytes calldata executionCalldata)
+        internal
+        virtual
+        override
+        withHook
+        returns (bytes[] memory)
+    {
         return super._execute(mode, executionCalldata);
     }
 

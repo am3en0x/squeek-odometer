@@ -25,20 +25,10 @@ abstract contract BridgeMultiToken is Context, CrosschainLinked {
     using InteroperableAddress for bytes;
 
     event CrosschainMultiTokenTransferSent(
-        bytes32 indexed sendId,
-        address indexed from,
-        bytes to,
-        uint256[] ids,
-        uint256[] values,
-        bytes data
+        bytes32 indexed sendId, address indexed from, bytes to, uint256[] ids, uint256[] values, bytes data
     );
     event CrosschainMultiTokenTransferReceived(
-        bytes32 indexed receiveId,
-        bytes from,
-        address indexed to,
-        uint256[] ids,
-        uint256[] values,
-        bytes data
+        bytes32 indexed receiveId, bytes from, address indexed to, uint256[] ids, uint256[] values, bytes data
     );
 
     /// @dev Revert reason when the address part of the interoperable address is empty.
@@ -74,16 +64,22 @@ abstract contract BridgeMultiToken is Context, CrosschainLinked {
 
     /// @inheritdoc ERC7786Recipient
     function _processMessage(
-        address /*gateway*/,
+        address,
+        /*gateway*/
         bytes32 receiveId,
-        bytes calldata /*sender*/,
+        bytes calldata,
+        /*sender*/
         bytes calldata payload
-    ) internal virtual override {
+    )
+        internal
+        virtual
+        override
+    {
         // NOTE: Gateway is validated by {_isAuthorizedGateway} (implemented in {CrosschainLinked}). No need to check here.
 
         // split payload
-        (bytes memory from, bytes memory toEvm, uint256[] memory ids, uint256[] memory values, bytes memory data) = abi
-            .decode(payload, (bytes, bytes, uint256[], uint256[], bytes));
+        (bytes memory from, bytes memory toEvm, uint256[] memory ids, uint256[] memory values, bytes memory data) =
+            abi.decode(payload, (bytes, bytes, uint256[], uint256[], bytes));
         address to = address(bytes20(toEvm));
 
         _onReceive(to, ids, values, data);

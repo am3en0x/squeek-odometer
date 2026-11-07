@@ -40,3 +40,8 @@
 | `Transfer`, `Approval`, `ApprovalForAll` | ERC-721 |
 
 Errors are listed in [ERRORS.md](ERRORS.md).
+
+`idOf` records mint history: a wallet can transfer that token away and still keep the same `idOf` value. Query
+`ownerOf` before treating it as the connected wallet's token, as `dist/app.js` does; a bought token is found through
+its `Transfer` log. `reading` and `tokenURI` revert only for a token that does not exist. A successful `refresh`
+receipt does not guarantee marketplace cache invalidation.

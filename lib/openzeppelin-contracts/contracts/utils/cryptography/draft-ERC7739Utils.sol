@@ -43,8 +43,9 @@ library ERC7739Utils {
         bytes32 contentsHash,
         string memory contentsDescr
     ) internal pure returns (bytes memory) {
-        return
-            abi.encodePacked(signature, appSeparator, contentsHash, contentsDescr, uint16(bytes(contentsDescr).length));
+        return abi.encodePacked(
+            signature, appSeparator, contentsHash, contentsDescr, uint16(bytes(contentsDescr).length)
+        );
     }
 
     /**
@@ -63,9 +64,7 @@ library ERC7739Utils {
      *
      * NOTE: This function returns empty if the input format is invalid instead of reverting.
      */
-    function decodeTypedDataSig(
-        bytes calldata encodedSignature
-    )
+    function decodeTypedDataSig(bytes calldata encodedSignature)
         internal
         pure
         returns (bytes calldata signature, bytes32 appSeparator, bytes32 contentsHash, string calldata contentsDescr)
@@ -120,12 +119,9 @@ library ERC7739Utils {
         bytes32 contentsHash,
         bytes memory domainBytes
     ) internal pure returns (bytes32 result) {
-        return
-            bytes(contentsName).length == 0
-                ? bytes32(0)
-                : keccak256(
-                    abi.encodePacked(typedDataSignTypehash(contentsName, contentsType), contentsHash, domainBytes)
-                );
+        return bytes(contentsName).length == 0
+            ? bytes32(0)
+            : keccak256(abi.encodePacked(typedDataSignTypehash(contentsName, contentsType), contentsHash, domainBytes));
     }
 
     /**
@@ -135,11 +131,11 @@ library ERC7739Utils {
      * NOTE: Returns `bytes32(0)` when `contentsDescr` is empty or malformed (i.e. {decodeContentsDescr} yields
      * an empty `contentsName`). See {typedDataSignStructHash-string-string-bytes32-bytes} for the caller's obligation.
      */
-    function typedDataSignStructHash(
-        string calldata contentsDescr,
-        bytes32 contentsHash,
-        bytes memory domainBytes
-    ) internal pure returns (bytes32 result) {
+    function typedDataSignStructHash(string calldata contentsDescr, bytes32 contentsHash, bytes memory domainBytes)
+        internal
+        pure
+        returns (bytes32 result)
+    {
         (string calldata contentsName, string calldata contentsType) = decodeContentsDescr(contentsDescr);
 
         return typedDataSignStructHash(contentsName, contentsType, contentsHash, domainBytes);
@@ -148,19 +144,19 @@ library ERC7739Utils {
     /**
      * @dev Compute the EIP-712 typehash of the `TypedDataSign` structure for a given type (and typename).
      */
-    function typedDataSignTypehash(
-        string calldata contentsName,
-        string calldata contentsType
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    "TypedDataSign(",
-                    contentsName,
-                    " contents,string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)",
-                    contentsType
-                )
-            );
+    function typedDataSignTypehash(string calldata contentsName, string calldata contentsType)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                "TypedDataSign(",
+                contentsName,
+                " contents,string name,string version,uint256 chainId,address verifyingContract,bytes32 salt)",
+                contentsType
+            )
+        );
     }
 
     /**
@@ -173,9 +169,11 @@ library ERC7739Utils {
      * If the `contentsDescr` is invalid, this returns empty strings. Otherwise, the return strings have non-zero
      * length.
      */
-    function decodeContentsDescr(
-        string calldata contentsDescr
-    ) internal pure returns (string calldata contentsName, string calldata contentsType) {
+    function decodeContentsDescr(string calldata contentsDescr)
+        internal
+        pure
+        returns (string calldata contentsName, string calldata contentsType)
+    {
         bytes calldata buffer = bytes(contentsDescr);
         if (buffer.length == 0) {
             // pass through (fail)

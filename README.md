@@ -14,20 +14,44 @@ plain ETH transfers revert.
 
 ![every stage, status and bottle](docs/gallery.png)
 
+## Imported launch handoff
+
+The application, art, vendored libraries and static site come from
+[`8a3615240715afb93f6f0eaa78c0018a7d4676f2`](https://github.com/am3en0x/squeek-odometer/tree/8a3615240715afb93f6f0eaa78c0018a7d4676f2).
+`python3 tools/check_upstream.py` verifies the 327 imported files offline against [the provenance record](docs/UPSTREAM.json),
+which holds the hash of each file as committed here and, under `adapted`, the upstream hash and the reason for every
+file that differs. The adaptation adds adversarial tests, deployment rehearsals and review notes, removes the gallery's
+EVM filesystem grants, makes that helper return data for a Python exporter, and pins the assignment's fuzz seed. The
+vendored `lib/` sources were reformatted by `forge fmt`; their compiled code is unchanged. The upstream `launch.json`
+is intentionally absent: the launch service's separate manifest step supplies it.
+
+**Review revision (2026-11-06):** the independent review reopened the accepted import with three defects, which this
+revision fixes in the contract and the art. The constructor no longer checks the chain id, because the launch
+rehearses it from its factory on a chain that is not Sepolia and it reverted there. Every word copied from a
+Squeekchain answer is now checked against the `uint64` its field declares: a non-canonical `state()` answer makes
+`reading` and `tokenURI` degrade to *unknown* instead of overflowing, and `mint` refuses it with `CoreUnreadable`
+instead of storing a baseline no real reading could ever exceed. The odometer screen pegs at 99,999 km instead of
+underflowing its text origin, and its digits now start one column later so they sit on the screen for every width.
+[REVIEW.md](docs/REVIEW.md) lists every finding with its disposition. Passing tests still do not replace the required
+independent review, and no deployment or broadcast has been performed by this work.
+
 ## Build and verify
 
 ```sh
 forge build
-forge test
-forge fmt --check src test script
+FOUNDRY_FUZZ_SEED=0x85fa591383f4e7b776f91b5633053b3d8132526e6370e1e924ac214f2266ba93 forge test
+forge fmt --check
 python3 tools/export_abi.py --check
+python3 tools/check_upstream.py
+python3 tools/export_gallery.py --check  # optional: reproduce all ten committed SVG assets
 FOUNDRY_PROFILE=fork forge test     # optional: against the real Squeekchain contracts on Sepolia at a pinned block
 ```
 
 `foundry.toml` pins Solidity **0.8.26**, Cancun, optimizer 200 runs and `bytecode_hash = "none"`. OpenZeppelin
 Contracts 5.7.0 and forge-std 1.16.2 are vendored as plain files in `lib/` with their licenses: no submodules, no FFI,
-no remote imports, no environment variables. The default tests use local mocks of SqueekCore, SqueekNFT and
-SqueekStaking and need no RPC. Fuzz tests run 512 cases with the seed pinned in `foundry.toml`. The fork profile needs a
+no remote imports. Tests and helpers do not read wallet configuration or environment variables. The default tests use local mocks of SqueekCore, SqueekNFT and
+SqueekStaking and need no RPC. Fuzz tests run 512 cases with the seed above pinned in `foundry.toml`. Stateful invariants run 128 sequences of
+64 calls with unexpected reverts treated as failures. The fork profile needs a
 Sepolia RPC (public by default). See [validation](docs/VALIDATION.md) for the recorded result, sizes and gas.
 
 ## Website (`dist/` static site)
@@ -44,13 +68,14 @@ and the fonts are bundled (`dist/fonts/`, SIL OFL). Design tokens and components
 - The contract address and deployment block come from `dist/config.js`, or, when IMD hosts the site, from
   `imd-deployment.json` next to the page.
 - `dist/samples/`, `dist/placeholder.svg` and `dist/favicon.svg` are the contract's own SVG, written by
-  `FOUNDRY_PROFILE=gallery forge script script/Gallery.s.sol`.
+  `python3 tools/export_gallery.py` (no EVM filesystem permissions). The committed assets remain unchanged.
 - Serve it locally with `python3 -m http.server -d dist`.
 
 ## Contracts and deployment parameters
 
 Deploy one contract in the launch's single factory transaction. The constructor is nonpayable, takes only static
-arguments, makes no external calls and reverts outside Sepolia (local chain 31337 is allowed for tests).
+arguments, makes no external calls and does not check the chain id: the launch rehearses it on an empty chain whose
+id is not Sepolia's, and it must deploy there. What binds the token to Sepolia is the three addresses below.
 
 | Contract | Constructor arguments in declaration order |
 | --- | --- |
@@ -59,8 +84,9 @@ arguments, makes no external calls and reverts outside Sepolia (local chain 3133
 The three addresses are Squeekchain's Sepolia release `core-sepolia-20261103`
 ([deployments](https://docs.squeekchain.com/developers/#deployments)) and are immutable. There is no `$owner` argument:
 the contract has no privileged role. No initialization call, no funding, no launch token, distributor or pool.
-`launch.json` carries the same parameters. Runtime size is **23,212 bytes**; deployment measured **5,126,572 gas** on a
-local chain, with a conservative factory estimate of **39,960,400 gas**. [IMD_JOB.md](docs/IMD_JOB.md) is the text for
+The later manifest step must use exactly these three address arguments, zero value and no initialization call.
+Runtime size is **23,398 bytes**, with **1,178 bytes** below EIP-170. The initcode is **24,082 bytes** before the
+96 bytes of constructor arguments. The local CREATE2 rehearsal succeeds with dependencies absent. [IMD_JOB.md](docs/IMD_JOB.md) is the text for
 the IMD launch request.
 
 ## Architecture and authorization
@@ -81,9 +107,13 @@ Who can do what:
 - Transfers and approvals: standard, unmodified OpenZeppelin.
 - Nothing else writes. No owner, admin, pause, upgrade, payable function, `receive` or withdrawal.
 
-Every Squeekchain read is a gas-capped `staticcall` that copies a fixed number of words, so a broken or hostile
-dependency can only fail its own read; `tokenURI` never reverts for an existing token. [Security handoff](docs/SECURITY.md)
-has the full reasoning, [ABI](docs/ABI.md) the client interface and [errors](docs/ERRORS.md) what each revert means.
+Every Squeekchain read is a gas-capped `staticcall` that copies a fixed number of words and checks each word it uses
+against the type its field declares (`uint64` for rounds, work and block height; a round page must start at ABI
+offset 32). Reverts, short replies, gas exhaustion and out-of-range words degrade to unknown metadata or a missing
+holder tier; mint fails if its starting read fails or is out of range. `tokenURI` is total over the whole `uint64`
+work domain: the screen pegs at 99,999 km while the JSON keeps the exact distance. Values inside their ranges are
+trusted as Squeekchain's data; they are not authenticated.
+[Security handoff](docs/SECURITY.md) describes these limits, [ABI](docs/ABI.md) the client interface and [errors](docs/ERRORS.md) what each revert means.
 
 ## How a token reads the wheel
 
@@ -113,21 +143,30 @@ writes them to `src/art/Sprites.sol` as run data; `src/art/OdometerArt.sol` turn
 through a write-once buffer, so a render costs linear gas.
 
 ```sh
-python3 tools/sprites.py                                     # regenerate Sprites.sol (and Pillow previews)
-FOUNDRY_PROFILE=gallery forge script script/Gallery.s.sol    # the contract's own SVG for every combination
+# The sprite source and committed art are preserved; regeneration is not needed for this launch.
+python3 tools/export_gallery.py                             # the contract's own SVG, returned to a local exporter
 ```
 
 ## After launch
 
-1. **Deployment service:** review, deploy `SqueekOdometer` with the arguments above, verify the source on the explorer,
-   and write the address and deployment block into `dist/config.js` (or ship `imd-deployment.json` next to the page).
-2. **Site:** pin `dist/` to IPFS. If member sites are closed, any static host works, for example GitHub Pages from
-   `dist/`.
+1. **Independent reviewer and deployment service:** confirm the three Sepolia dependencies and their ABI layouts
+   (both proxies can be upgraded by Squeekchain's timelock; see [REVIEW.md](docs/REVIEW.md)), deploy `SqueekOdometer`
+   with the arguments above, verify the source on the explorer, and write the address and deployment block into
+   `dist/config.js` (or ship `imd-deployment.json` next to the page).
+2. **Site operator, if a site is requested separately:** populate the real deployed address and block, choose an RPC
+   with sufficient `eth_call` gas, and host `dist/`. Site hosting is outside this contracts-only launch. The empty
+   address in `dist/config.js` is an explicit pre-deployment placeholder, never a guessed contract address.
 3. **Anyone:** mint once per wallet; call `refresh(id)` or `refreshAll()` when a marketplace shows a stale image.
 4. **If Squeekchain redeploys SqueekCore:** existing tokens keep reading the old address. There is no owner to repoint
    them; a new deployment of this contract would be needed.
 
-No wallet key, signer, keeper, fee, funding or external service account is needed to operate it.
+There are no owner-settable settings or post-launch configuration transactions. Nobody can repoint the immutable
+dependencies or repair deployed code. Users pay Sepolia transaction gas; there is no mint price or maintenance keeper.
+A dependency outage can stop new mints; recovery at the same address restores reads without an administrative action.
+During an outage `tokenURI` still answers, with status *Unknown*, a "?" on the screen and zero distance (see
+[SECURITY.md](docs/SECURITY.md)). Clients should handle RPC failures. Refresh events request cache invalidation;
+marketplaces choose whether to honor them. The 9,999 cap is first come, first served per address, and addresses are
+free: a token minted by a contract that cannot transfer it is stranded, and once the cap is reached nobody mints again.
 
 ## License
 

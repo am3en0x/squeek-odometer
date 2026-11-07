@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import {Script} from "forge-std/Script.sol";
 import {OdometerArt} from "../src/art/OdometerArt.sol";
 import {Reading} from "../src/Types.sol";
 
-/// @notice Writes previews/gallery.html (the contract's own SVG for every stage, status and holder flag) and the
-/// site's placeholder and icon. Run: FOUNDRY_PROFILE=gallery forge script script/Gallery.s.sol
-contract Gallery is Script {
-    function run() external {
+/// @notice Returns the gallery and site assets without filesystem permissions, network access or broadcasting.
+/// @dev `python3 tools/export_gallery.py` writes the returned data outside the EVM.
+contract Gallery {
+    function run() external pure returns (string memory gallery, string[] memory assets) {
+        assets = new string[](10);
         uint256[7] memory mm = [uint256(420_000), 1_070_000, 5_310_000, 12_730_000, 27_900_000, 58_120_000, 104_660_000];
         string[7] memory stages = ["Newbie", "Warm-up", "Jogger", "Runner", "Racer", "Marathoner", "Legend"];
         string[4] memory statuses = ["Jogging", "Zoomies", "Napping", "Unknown (SqueekCore unreadable)"];
@@ -56,13 +56,13 @@ contract Gallery is Script {
             }
             html = string.concat(html, "</div>");
         }
-        vm.writeFile("previews/gallery.html", string.concat(html, "</body>"));
+        gallery = string.concat(html, "</body>");
         // the site's placeholder and icon: a fresh odometer, jogging at 0.00 km
         Reading memory fresh;
         fresh.status = 1;
         fresh.live = true;
-        vm.writeFile("dist/placeholder.svg", string(OdometerArt.svg(1, fresh)));
-        vm.writeFile("dist/favicon.svg", string(OdometerArt.svg(1, fresh)));
+        assets[0] = string(OdometerArt.svg(1, fresh));
+        assets[1] = assets[0];
         // the site's stage strip: one odometer per stage, each with another display, casing, treat and bottle
         uint8[7] memory displays = [0, 1, 2, 3, 4, 5, 1];
         uint8[7] memory pouches = [0, 1, 2, 3, 4, 1, 4];
@@ -79,10 +79,7 @@ contract Gallery is Script {
             r.tier = tiers[stage];
             r.holder = r.tier > 0;
             r.pace = r.status == 2 ? 1_800 : 600;
-            vm.writeFile(
-                string.concat("dist/samples/stage-", vm.toString(uint256(stage)), ".svg"),
-                string(OdometerArt.svg(uint256(stage) + 3, r))
-            );
+            assets[uint256(stage) + 2] = string(OdometerArt.svg(uint256(stage) + 3, r));
         }
         Reading memory nap;
         nap.stage = 2;
@@ -91,6 +88,6 @@ contract Gallery is Script {
         nap.display = 3;
         nap.casing = 2;
         nap.pouch = 1;
-        vm.writeFile("dist/samples/napping.svg", string(OdometerArt.svg(12, nap)));
+        assets[9] = string(OdometerArt.svg(12, nap));
     }
 }

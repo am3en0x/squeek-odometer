@@ -224,11 +224,11 @@ library EnumerableMap {
      * this function has an unbounded cost, and using it as part of a state-changing function may render the function
      * uncallable if the map grows to a point where copying to memory consumes too much gas to fit in a block.
      */
-    function keys(
-        Bytes32ToBytes32Map storage map,
-        uint256 start,
-        uint256 end
-    ) internal view returns (bytes32[] memory) {
+    function keys(Bytes32ToBytes32Map storage map, uint256 start, uint256 end)
+        internal
+        view
+        returns (bytes32[] memory)
+    {
         return map._keys.values(start, end);
     }
 
@@ -1026,11 +1026,11 @@ library EnumerableMap {
      * this function has an unbounded cost, and using it as part of a state-changing function may render the function
      * uncallable if the map grows to a point where copying to memory consumes too much gas to fit in a block.
      */
-    function keys(
-        AddressToAddressMap storage map,
-        uint256 start,
-        uint256 end
-    ) internal view returns (address[] memory) {
+    function keys(AddressToAddressMap storage map, uint256 start, uint256 end)
+        internal
+        view
+        returns (address[] memory)
+    {
         bytes32[] memory store = keys(map._inner, start, end);
         address[] memory result;
 
@@ -1191,11 +1191,11 @@ library EnumerableMap {
      * this function has an unbounded cost, and using it as part of a state-changing function may render the function
      * uncallable if the map grows to a point where copying to memory consumes too much gas to fit in a block.
      */
-    function keys(
-        AddressToBytes32Map storage map,
-        uint256 start,
-        uint256 end
-    ) internal view returns (address[] memory) {
+    function keys(AddressToBytes32Map storage map, uint256 start, uint256 end)
+        internal
+        view
+        returns (address[] memory)
+    {
         bytes32[] memory store = keys(map._inner, start, end);
         address[] memory result;
 
@@ -1517,11 +1517,11 @@ library EnumerableMap {
      * this function has an unbounded cost, and using it as part of a state-changing function may render the function
      * uncallable if the map grows to a point where copying to memory consumes too much gas to fit in a block.
      */
-    function keys(
-        Bytes32ToAddressMap storage map,
-        uint256 start,
-        uint256 end
-    ) internal view returns (bytes32[] memory) {
+    function keys(Bytes32ToAddressMap storage map, uint256 start, uint256 end)
+        internal
+        view
+        returns (bytes32[] memory)
+    {
         bytes32[] memory store = keys(map._inner, start, end);
         bytes32[] memory result;
 
@@ -1741,10 +1741,10 @@ library EnumerableMap {
      *
      * - `index` must be strictly less than {length}.
      */
-    function removeAt(
-        BytesToBytesMap storage map,
-        uint256 index
-    ) internal returns (bytes memory key, bytes memory value) {
+    function removeAt(BytesToBytesMap storage map, uint256 index)
+        internal
+        returns (bytes memory key, bytes memory value)
+    {
         key = map._keys.removeAt(index);
         value = map._values[key];
         delete map._values[key];
@@ -1791,10 +1791,11 @@ library EnumerableMap {
      * IMPORTANT: Deprecated. This function's name clashes with a keyword scheduled for inclusion in Solidity. Developers
      * should use {pos} instead.
      */
-    function at(
-        BytesToBytesMap storage map,
-        uint256 index
-    ) internal view returns (bytes memory key, bytes memory value) {
+    function at(BytesToBytesMap storage map, uint256 index)
+        internal
+        view
+        returns (bytes memory key, bytes memory value)
+    {
         return pos(map, index);
     }
 
@@ -1809,10 +1810,11 @@ library EnumerableMap {
      *
      * Replacement of the deprecated {at} function.
      */
-    function pos(
-        BytesToBytesMap storage map,
-        uint256 index
-    ) internal view returns (bytes memory key, bytes memory value) {
+    function pos(BytesToBytesMap storage map, uint256 index)
+        internal
+        view
+        returns (bytes memory key, bytes memory value)
+    {
         key = map._keys.pos(index);
         value = map._values[key];
     }
@@ -1821,10 +1823,11 @@ library EnumerableMap {
      * @dev Tries to return the value associated with `key`. O(1).
      * Does not revert if `key` is not in the map.
      */
-    function tryGet(
-        BytesToBytesMap storage map,
-        bytes memory key
-    ) internal view returns (bool exists, bytes memory value) {
+    function tryGet(BytesToBytesMap storage map, bytes memory key)
+        internal
+        view
+        returns (bool exists, bytes memory value)
+    {
         value = map._values[key];
         exists = bytes(value).length != 0 || contains(map, key);
     }

@@ -37,13 +37,10 @@ abstract contract BridgeERC1155 is BridgeMultiToken, ERC1155Holder {
      *
      * Note: The `to` parameter is the full InteroperableAddress (chain ref + address).
      */
-    function crosschainTransferFrom(
-        address from,
-        bytes memory to,
-        uint256 id,
-        uint256 value,
-        bytes memory data
-    ) public returns (bytes32) {
+    function crosschainTransferFrom(address from, bytes memory to, uint256 id, uint256 value, bytes memory data)
+        public
+        returns (bytes32)
+    {
         uint256[] memory ids = new uint256[](1);
         uint256[] memory values = new uint256[](1);
         ids[0] = id;
@@ -53,12 +50,10 @@ abstract contract BridgeERC1155 is BridgeMultiToken, ERC1155Holder {
     }
 
     /// @dev Equivalent to `crosschainTransferFrom(from, to, ids, values, "")`.
-    function crosschainTransferFrom(
-        address from,
-        bytes memory to,
-        uint256[] memory ids,
-        uint256[] memory values
-    ) public returns (bytes32) {
+    function crosschainTransferFrom(address from, bytes memory to, uint256[] memory ids, uint256[] memory values)
+        public
+        returns (bytes32)
+    {
         return crosschainTransferFrom(from, to, ids, values, "");
     }
 
@@ -92,40 +87,53 @@ abstract contract BridgeERC1155 is BridgeMultiToken, ERC1155Holder {
     }
 
     /// @dev "Unlocking" tokens is done by releasing custody.
-    function _onReceive(
-        address to,
-        uint256[] memory ids,
-        uint256[] memory values,
-        bytes memory data
-    ) internal virtual override {
+    function _onReceive(address to, uint256[] memory ids, uint256[] memory values, bytes memory data)
+        internal
+        virtual
+        override
+    {
         token().safeBatchTransferFrom(address(this), to, ids, values, data);
     }
 
     /// @dev Support receiving tokens only if the transfer was initiated by the bridge itself.
     function onERC1155Received(
         address operator,
-        address /* from */,
-        uint256 /* id */,
-        uint256 /* value */,
+        address,
+        /* from */
+        uint256,
+        /* id */
+        uint256,
+        /* value */
         bytes memory /* data */
-    ) public virtual override returns (bytes4) {
-        return
-            msg.sender == address(_token) && operator == address(this)
-                ? IERC1155Receiver.onERC1155Received.selector
-                : bytes4(0);
+    )
+        public
+        virtual
+        override
+        returns (bytes4)
+    {
+        return msg.sender == address(_token) && operator == address(this)
+            ? IERC1155Receiver.onERC1155Received.selector
+            : bytes4(0);
     }
 
     /// @dev Support receiving tokens only if the transfer was initiated by the bridge itself.
     function onERC1155BatchReceived(
         address operator,
-        address /* from */,
-        uint256[] memory /* ids */,
-        uint256[] memory /* values */,
+        address,
+        /* from */
+        uint256[] memory,
+        /* ids */
+        uint256[] memory,
+        /* values */
         bytes memory /* data */
-    ) public virtual override returns (bytes4) {
-        return
-            msg.sender == address(_token) && operator == address(this)
-                ? IERC1155Receiver.onERC1155BatchReceived.selector
-                : bytes4(0);
+    )
+        public
+        virtual
+        override
+        returns (bytes4)
+    {
+        return msg.sender == address(_token) && operator == address(this)
+            ? IERC1155Receiver.onERC1155BatchReceived.selector
+            : bytes4(0);
     }
 }

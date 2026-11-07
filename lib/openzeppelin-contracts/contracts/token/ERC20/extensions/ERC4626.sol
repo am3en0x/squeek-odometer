@@ -265,13 +265,10 @@ abstract contract ERC4626 is ERC20, IERC4626 {
     /**
      * @dev Withdraw/redeem common workflow.
      */
-    function _withdraw(
-        address caller,
-        address receiver,
-        address owner,
-        uint256 assets,
-        uint256 shares
-    ) internal virtual {
+    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
+        internal
+        virtual
+    {
         if (caller != owner) {
             _spendAllowance(owner, caller, shares);
         }

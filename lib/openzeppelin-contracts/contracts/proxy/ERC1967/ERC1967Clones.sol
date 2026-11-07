@@ -81,7 +81,6 @@ library ERC1967Clones {
      * - 0x47: length of the deployment code, since the proxy code is just after the deployment code, that is also the offset of the proxy code
      * - 0x09: position of the ERC1967 implementation slot in the proxy code.
      */
-
     /**
      * @dev Deploys and returns the address of a minimal ERC-1967 proxy that delegates to `implementation`.
      *
@@ -159,11 +158,10 @@ library ERC1967Clones {
      * NOTE: Using a non-zero value at creation will require the contract using this function (e.g. a factory)
      * to always have enough balance for new deployments. Consider exposing this function under a payable method.
      */
-    function cloneDeterministic(
-        address implementation,
-        bytes32 salt,
-        uint256 value
-    ) internal returns (address instance) {
+    function cloneDeterministic(address implementation, bytes32 salt, uint256 value)
+        internal
+        returns (address instance)
+    {
         require(address(this).balance >= value, Errors.InsufficientBalance(address(this).balance, value));
         bytes32 implementationSlot = ERC1967Utils.IMPLEMENTATION_SLOT;
         bytes32 topic1 = IERC1967.Upgraded.selector;
@@ -190,11 +188,11 @@ library ERC1967Clones {
     }
 
     /// @dev Computes the address of a clone deployed using {ERC1967Clones-cloneDeterministic}.
-    function predictDeterministicAddress(
-        address implementation,
-        bytes32 salt,
-        address deployer
-    ) internal pure returns (address) {
+    function predictDeterministicAddress(address implementation, bytes32 salt, address deployer)
+        internal
+        pure
+        returns (address)
+    {
         return Create2.computeAddress(salt, _getCloneHash(implementation), deployer);
     }
 

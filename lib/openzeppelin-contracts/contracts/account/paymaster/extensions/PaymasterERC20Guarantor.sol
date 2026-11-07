@@ -75,8 +75,9 @@ abstract contract PaymasterERC20Guarantor is PaymasterERC20 {
         if (isGuaranteed) {
             // Reject before pulling funds if the postOp gas budget can't cover the guaranteed {_refund};
             // otherwise postOp reverts and strands the guarantor's prefund (see {PaymasterERC20-_postOp}).
-            if (userOp.paymasterPostOpGasLimit() < _postOpCost() + _guaranteedPostOpCost())
+            if (userOp.paymasterPostOpGasLimit() < _postOpCost() + _guaranteedPostOpCost()) {
                 return (false, prefunder_, prefundAmount_, "");
+            }
 
             // `_erc20Cost` may return `type(uint256).max` as an overflow sentinel. `saturatingAdd` preserves it
             // so the bad value reaches `trySafeTransferFrom` and fails there, instead of reverting here.
@@ -84,14 +85,8 @@ abstract contract PaymasterERC20Guarantor is PaymasterERC20 {
             prefundAmount_ = prefundAmount_.saturatingAdd(guaranteedPostOpCost);
             prefunder_ = guarantor;
         }
-        (success, prefunder, prefundAmount, prefundContext) = super._prefund(
-            userOp,
-            userOpHash,
-            token,
-            tokenPrice,
-            prefunder_,
-            prefundAmount_
-        );
+        (success, prefunder, prefundAmount, prefundContext) =
+            super._prefund(userOp, userOpHash, token, tokenPrice, prefunder_, prefundAmount_);
         if (prefunder == guarantor) {
             emit UserOperationGuaranteed(userOpHash, prefunder, prefundAmount);
         }
@@ -149,13 +144,7 @@ abstract contract PaymasterERC20Guarantor is PaymasterERC20 {
         uint256 returnedEffectiveAmount;
         bytes calldata forwardedContext = prefundContext[:prefundContext.length - 20];
         (refunded, returnedEffectiveAmount) = super._refund(
-            token,
-            tokenPrice,
-            actualAmount,
-            actualUserOpFeePerGas,
-            prefunder,
-            prefundAmount,
-            forwardedContext
+            token, tokenPrice, actualAmount, actualUserOpFeePerGas, prefunder, prefundAmount, forwardedContext
         );
         return (refunded, Math.ternary(prefunder != userOpSender, effectiveAmount, returnedEffectiveAmount));
     }
@@ -166,8 +155,8 @@ abstract contract PaymasterERC20Guarantor is PaymasterERC20 {
      */
     function _postOpGasBudget(PackedUserOperation calldata userOp) internal view virtual override returns (uint256) {
         return
-            super._postOpGasBudget(userOp) +
-            Math.ternary(_fetchGuarantor(userOp) == address(0), 0, _guaranteedPostOpCost());
+            super._postOpGasBudget(userOp)
+                + Math.ternary(_fetchGuarantor(userOp) == address(0), 0, _guaranteedPostOpCost());
     }
 
     /**

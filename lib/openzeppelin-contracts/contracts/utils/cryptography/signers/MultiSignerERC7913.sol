@@ -221,14 +221,16 @@ abstract contract MultiSignerERC7913 is AbstractSigner {
      *
      * * The `signature` must be encoded as `abi.encode(signers, signatures)`.
      */
-    function _rawSignatureValidation(
-        bytes32 hash,
-        bytes calldata signature
-    ) internal view virtual override returns (bool) {
+    function _rawSignatureValidation(bytes32 hash, bytes calldata signature)
+        internal
+        view
+        virtual
+        override
+        returns (bool)
+    {
         if (signature.length == 0) return false; // For ERC-7739 compatibility
-        (bool success, bytes[] calldata signers, bytes[] calldata signatures) = _tryDecodeMultisignatureCalldata(
-            signature
-        );
+        (bool success, bytes[] calldata signers, bytes[] calldata signatures) =
+            _tryDecodeMultisignatureCalldata(signature);
         return success && _validateThreshold(signers) && _validateSignatures(hash, signers, signatures);
     }
 
@@ -243,11 +245,12 @@ abstract contract MultiSignerERC7913 is AbstractSigner {
      *
      * * The `signatures` and `signers` arrays must be equal in length. Returns false otherwise.
      */
-    function _validateSignatures(
-        bytes32 hash,
-        bytes[] calldata signers,
-        bytes[] calldata signatures
-    ) internal view virtual returns (bool valid) {
+    function _validateSignatures(bytes32 hash, bytes[] calldata signers, bytes[] calldata signatures)
+        internal
+        view
+        virtual
+        returns (bool valid)
+    {
         for (uint256 i = 0; i < signers.length; ++i) {
             if (!isSigner(signers[i])) {
                 return false;
@@ -269,9 +272,11 @@ abstract contract MultiSignerERC7913 is AbstractSigner {
      * allocation. Returns `success = false` on malformed encoding so callers can report an invalid
      * signature instead of reverting during validation (see ERC-4337 `SIG_VALIDATION_FAILED` semantics).
      */
-    function _tryDecodeMultisignatureCalldata(
-        bytes calldata signature
-    ) private pure returns (bool success, bytes[] calldata signers, bytes[] calldata signatures) {
+    function _tryDecodeMultisignatureCalldata(bytes calldata signature)
+        private
+        pure
+        returns (bool success, bytes[] calldata signers, bytes[] calldata signatures)
+    {
         unchecked {
             uint256 bufferLength = signature.length;
 
@@ -289,8 +294,9 @@ abstract contract MultiSignerERC7913 is AbstractSigner {
             }
 
             // Check #2: The length fields that the offset pointers point to must be within the bounds of the buffer.
-            if (signersOffset > bufferLength - 0x20 || signaturesOffset > bufferLength - 0x20)
+            if (signersOffset > bufferLength - 0x20 || signaturesOffset > bufferLength - 0x20) {
                 return (false, _emptyBytesArray(), _emptyBytesArray());
+            }
 
             // Read the length fields
             // Read is done in assembly to avoid the cost of creating calldata slices.
@@ -309,10 +315,9 @@ abstract contract MultiSignerERC7913 is AbstractSigner {
             // - Cap lengths at 2**64-1 (Solidity's own dynamic-array limit) so `length * 0x20` cannot overflow.
             // - The data for each array must fit within the bounds of the buffer.
             if (
-                signersLength > type(uint64).max ||
-                signaturesLength > type(uint64).max ||
-                0x20 * signersLength > bufferLength - signersDataOffset ||
-                0x20 * signaturesLength > bufferLength - signaturesDataOffset
+                signersLength > type(uint64).max || signaturesLength > type(uint64).max
+                    || 0x20 * signersLength > bufferLength - signersDataOffset
+                    || 0x20 * signaturesLength > bufferLength - signaturesDataOffset
             ) return (false, _emptyBytesArray(), _emptyBytesArray());
 
             // Assembly cast
