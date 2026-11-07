@@ -12,6 +12,18 @@ review handoff and the static site. Testnet only. Not affiliated with Squeekchai
 There is no owner, admin, fee, payout, token, pool, randomness service, proxy or upgrade path. The mint is free and
 plain ETH transfers revert.
 
+## Deployed
+
+| What | Where |
+| --- | --- |
+| SqueekOdometer (Sepolia) | [`0xfa2ba246ace7967b894beec596c41b392b366e2d`](https://sepolia.etherscan.io/address/0xfa2ba246ace7967b894beec596c41b392b366e2d) |
+| Deployment | block 12,079,282, transaction [`0x41cafb6a…8d0e`](https://sepolia.etherscan.io/tx/0x41cafb6a1bc576dd78a2acb89e188f95b5f14dc8c08750eff0f96aafbf048d0e) |
+| IMD launch | #3080, job [`de1d7e5c`](https://explorer.imd.fun/jobs/de1d7e5c-aa02-43c9-b623-2a817be5ec65): import audit, adaptation, tests, a four-specialist audit panel and judge, all admission checks passed |
+| Reviewed source | IMD's delivery [`6f96fbd`](https://github.com/identity-md-launches/launch-3080-https-github-com-am3en0x-squeek-odometer/tree/6f96fbd84c4af603cb60f30069f42c95a76f7ecb); this repository carries the same tree plus the deployed address in `dist/config.js` |
+
+The runtime code at that address matches `forge build` of this tree byte for byte once the three immutable dependency
+addresses are masked, and those read back as SqueekCore, SqueekNFT and SqueekStaking above.
+
 ![every stage, status and bottle](docs/gallery.png)
 
 ## Imported launch handoff
@@ -149,13 +161,11 @@ python3 tools/export_gallery.py                             # the contract's own
 
 ## After launch
 
-1. **Independent reviewer and deployment service:** confirm the three Sepolia dependencies and their ABI layouts
-   (both proxies can be upgraded by Squeekchain's timelock; see [REVIEW.md](docs/REVIEW.md)), deploy `SqueekOdometer`
-   with the arguments above, verify the source on the explorer, and write the address and deployment block into
-   `dist/config.js` (or ship `imd-deployment.json` next to the page).
-2. **Site operator, if a site is requested separately:** populate the real deployed address and block, choose an RPC
-   with sufficient `eth_call` gas, and host `dist/`. Site hosting is outside this contracts-only launch. The empty
-   address in `dist/config.js` is an explicit pre-deployment placeholder, never a guessed contract address.
+1. **Independent reviewer and deployment service:** done by IMD launch 3080 (see [Deployed](#deployed)). Both
+   Squeekchain proxies can still be upgraded by Squeekchain's timelock; see [REVIEW.md](docs/REVIEW.md).
+2. **Site operator:** `dist/config.js` holds the deployed address and block; host `dist/` on any static host, with an
+   RPC that allows enough `eth_call` gas for `tokenURI` (about 1.7 to 3.2 million). Site hosting was outside the
+   contracts-only launch.
 3. **Anyone:** mint once per wallet; call `refresh(id)` or `refreshAll()` when a marketplace shows a stale image.
 4. **If Squeekchain redeploys SqueekCore:** existing tokens keep reading the old address. There is no owner to repoint
    them; a new deployment of this contract would be needed.

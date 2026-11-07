@@ -1,7 +1,7 @@
-// Filled in after the deploy: the odometer contract on Sepolia and the block it was deployed in.
+// The odometer contract on Sepolia (IMD launch 3080) and the block it was deployed in.
 window.ODOMETER_CONFIG = {
-  address: '',
-  fromBlock: 0,
+  address: '0xfa2ba246ace7967b894beec596c41b392b366e2d',
+  fromBlock: 12079282,
   chainId: 11155111,
   rpc: 'https://ethereum-sepolia-rpc.publicnode.com',
   explorer: 'https://sepolia.etherscan.io',
