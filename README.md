@@ -16,6 +16,7 @@ plain ETH transfers revert.
 
 | What | Where |
 | --- | --- |
+| Mint site | [am3en0x.github.io/squeek-odometer](https://am3en0x.github.io/squeek-odometer/) (GitHub Pages, branch `gh-pages` = `dist/`) |
 | SqueekOdometer (Sepolia) | [`0xfa2ba246ace7967b894beec596c41b392b366e2d`](https://sepolia.etherscan.io/address/0xfa2ba246ace7967b894beec596c41b392b366e2d) |
 | Deployment | block 12,079,282, transaction [`0x41cafb6a…8d0e`](https://sepolia.etherscan.io/tx/0x41cafb6a1bc576dd78a2acb89e188f95b5f14dc8c08750eff0f96aafbf048d0e) |
 | IMD launch | #3080, job [`de1d7e5c`](https://explorer.imd.fun/jobs/de1d7e5c-aa02-43c9-b623-2a817be5ec65): import audit, adaptation, tests, a four-specialist audit panel and judge, all admission checks passed |
